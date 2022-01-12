@@ -41,8 +41,6 @@ public class BindPoseExample : MonoBehaviour
         weights[7].weight0 = 1;
         mesh.boneWeights = weights;
         var boneWeight = mesh.GetAllBoneWeights();
-        Debug.Log(boneWeight[0].boneIndex);
-        Debug.Log(boneWeight[1].boneIndex);
         // Create Bone Transforms and Bind poses
         // One bone at the bottom and one at the top
 
@@ -75,6 +73,10 @@ public class BindPoseExample : MonoBehaviour
         // Assign bones and bind poses
         rend.bones = bones;
         rend.sharedMesh = mesh;
+        GameObject gameObject2 = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        gameObject2.transform.parent = transform;
+        gameObject2.transform.localPosition = new Vector3(bindPoses[1][0, 3], bindPoses[1][1, 3], bindPoses[1][2, 3]);
+        gameObject2.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
         // Assign a simple waving animation to the bottom bone
         AnimationCurve curve = new AnimationCurve();

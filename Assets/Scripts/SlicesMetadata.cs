@@ -28,6 +28,7 @@ namespace Assets.Scripts
         private List<int> _positiveSideTriangles;
         private List<Vector2> _positiveSideUvs;
         private List<Vector3> _positiveSideNormals;
+        public List<int> vert_boneInfos;
 
         private Mesh _negativeSideMesh;
         private List<Vector3> _negativeSideVertices;
@@ -44,6 +45,8 @@ namespace Assets.Scripts
         private bool _useSharedVertices = false;
         private bool _smoothVertices = false;
         private bool _createReverseTriangleWindings = false;
+
+        GameObject sliceObject;
 
         public bool IsSolid
         {
@@ -98,6 +101,7 @@ namespace Assets.Scripts
             _negativeSideNormals = new List<Vector3>();
             _pointsAlongPlane = new List<Vector3>();
             _plane = plane;
+            sliceObject = gameObject;
             bones = gameObject.transform.GetComponentsInChildren<Transform>();
             skinnedMesh = skinnedMeshRenderer;
             _mesh = mesh;
@@ -152,6 +156,9 @@ namespace Assets.Scripts
         /// <param name="vertex3Uv"></param>
         /// <param name="normal3"></param>
         /// <param name="shareVertices"></param>
+        /// 
+
+        public int count;
         private void AddTrianglesNormalsAndUvs(ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector3> normals, ref List<Vector2> uvs, Vector3 vertex1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
         {
             int tri1Index = vertices.IndexOf(vertex1);
@@ -171,6 +178,20 @@ namespace Assets.Scripts
                 if (normal1 == null)
                 {
                     normal1 = ComputeNormal(vertex1, vertex2, vertex3);                    
+                }
+
+                if (vertices == _positiveSideVertices)
+                {
+                    float distance = 1000;
+                    int closestBone = 0;
+                    for (int b = 0; b < bones.Length; b++)
+                    {
+                        if (Vector3.Distance(vertex1, bones[b].position) < distance)
+                        {
+                            distance = Vector3.Distance(vertex1, bones[b].position);
+                            closestBone = b;
+                        }
+                    }
                 }
 
                 int? i = null;
@@ -194,7 +215,21 @@ namespace Assets.Scripts
                 {
                     normal2 = ComputeNormal(vertex2, vertex3, vertex1);
                 }
-                
+
+                if (vertices == _positiveSideVertices)
+                {
+                    float distance = 1000;
+                    int closestBone = 0;
+                    for (int b = 0; b < bones.Length; b++)
+                    {
+                        if (Vector3.Distance(vertex2, bones[b].position) < distance)
+                        {
+                            distance = Vector3.Distance(vertex2, bones[b].position);
+                            closestBone = b;
+                        }
+                    }
+                }
+
                 int? i = null;
                 
                 if (addFirst)
@@ -237,6 +272,23 @@ namespace Assets.Scripts
                 uvs.Insert(i, uv);
                 normals.Insert(i, normal);
                 triangles.Insert(i, i);
+
+                if (vertices == _positiveSideVertices)
+                {
+                    int bone = 0;
+                    float distance = 1000;
+                    for (int a = 0; a < bones.Length; a++)
+                    {
+                        if (Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position) < distance)
+                        {
+                            distance = Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position);
+                            bone = a;
+                            
+                        }
+                    }
+                    Debug.Log(bones[bone]);
+                    vert_boneInfos.Insert(i, bone);
+                }
             }
             else
             {
@@ -244,7 +296,27 @@ namespace Assets.Scripts
                 normals.Add(normal);
                 uvs.Add(uv);
                 triangles.Add(vertices.IndexOf(vertex));
+
+                if (vertices == _positiveSideVertices)
+                {
+                    int bone = 0;
+                    float distance = 1000;
+                    for (int a = 0; a < bones.Length; a++)
+                    {
+                        if (Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position) < distance)
+                        {
+                            distance = Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position);
+                            bone = a;
+
+                        }
+                    }
+                    Debug.Log(bones[bone]);
+                    vert_boneInfos.Add(bone);
+                }
             }
+
+            if (vertices == _positiveSideVertices)
+                count++;
         }
 
         private void ShiftTriangleIndeces(ref List<int> triangles)
@@ -393,10 +465,11 @@ namespace Assets.Scripts
             Vector3[] meshVerts = _mesh.vertices;
             Vector3[] meshNormals = _mesh.normals;
             Vector2[] meshUvs = _mesh.uv;
+
             var boneWeight = _mesh.GetAllBoneWeights();
             var perVert = _mesh.GetBonesPerVertex();
-            Debug.Log(boneWeight[0].boneIndex);
-            Debug.Log(perVert[0]);
+            vert_boneInfos = new List<int>();
+
             for (int i = 0; i < meshTriangles.Length; i += 3)
             {
                 //We need the verts in order so that we know which way to wind our new mesh triangles.
