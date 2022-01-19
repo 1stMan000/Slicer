@@ -9,6 +9,7 @@ namespace Assets.Scripts
 {
     class Slicer
     {
+        
         /// <summary>
         /// Slice the object by the plane 
         /// </summary>
@@ -22,58 +23,209 @@ namespace Assets.Scripts
             var a = mesh.GetSubMesh(0);
             Sliceable sliceable = objectToCut.GetComponent<Sliceable>();
 
-            GameObject root = objectToCut.transform.parent.GetChild(1).gameObject;
             if (sliceable == null)
             {
                 throw new NotSupportedException("Cannot slice non sliceable object, add the sliceable script to the object or inherit from sliceable to support slicing");
             }
-            
-            //Create left and right slice of hollow object
-            SlicesMetadata slicesMeta = new SlicesMetadata(plane, objectToCut.transform.parent.GetChild(1).gameObject, objectToCut.GetComponent<SkinnedMeshRenderer>(), mesh, sliceable.IsSolid, sliceable.ReverseWireTriangles, sliceable.ShareVertices, sliceable.SmoothVertices);            
 
-            GameObject positiveObject = CreateMeshGameObject(objectToCut);
+            GameObject root = null;
+
+            MeshRenderer meshRenderer = objectToCut.GetComponent<MeshRenderer>();
+            SlicesMetadata slicesMeta;
+            bool isMeshRend;
+            //Create left and right slice of hollow object
+            if (meshRenderer != null)
+            {
+                isMeshRend = true;
+                slicesMeta = new SlicesMetadata(plane, objectToCut, mesh, sliceable.IsSolid, sliceable.ReverseWireTriangles, sliceable.ShareVertices, sliceable.SmoothVertices);
+            }
+            else
+            {
+                isMeshRend = false;
+                slicesMeta = new SlicesMetadata(plane, objectToCut.transform.parent.GetChild(1).gameObject, objectToCut.GetComponent<SkinnedMeshRenderer>(), objectToCut.GetComponent<SkinnedMeshRenderer>().sharedMesh, sliceable.IsSolid, sliceable.ReverseWireTriangles, sliceable.ShareVertices, sliceable.SmoothVertices);
+
+                root = objectToCut.transform.root.GetChild(1).gameObject;
+            }
+
+            GameObject positiveObject = CreateMeshGameObject(objectToCut, isMeshRend);
             positiveObject.name = string.Format("{0}_positive", objectToCut.name);
 
-            GameObject negativeObject = CreateMeshGameObject(objectToCut);
+            GameObject negativeObject = CreateMeshGameObject(objectToCut, isMeshRend);
             negativeObject.name = string.Format("{0}_negative", objectToCut.name);
 
             var positiveSideMeshData = slicesMeta.PositiveSideMesh;
             var negativeSideMeshData = slicesMeta.NegativeSideMesh;
             positiveObject.GetComponent<MeshFilter>().mesh = positiveSideMeshData;
             negativeObject.GetComponent<MeshFilter>().mesh = negativeSideMeshData;
-            positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = positiveSideMeshData;
-
-            NativeArray<BoneWeight1> boneWeight1s = new NativeArray<BoneWeight1>(slicesMeta.vert_boneInfos.Count, Allocator.TempJob);
-            for (int b = 0; b < slicesMeta.vert_boneInfos.Count; b++)
+            if (!isMeshRend)
             {
-                BoneWeight1 weight1 = boneWeight1s[b];
-                weight1.boneIndex = slicesMeta.vert_boneInfos[b];
-                weight1.weight = 1;
-                boneWeight1s[b] = weight1;
-                Debug.Log(weight1.boneIndex);
-            }
-            NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.vert_boneInfos.Count, Allocator.TempJob);
-            for (int b = 0; b < slicesMeta.vert_boneInfos.Count; b++)
-            {
-                vs[b] = 1;
-            }
-            positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.SetBoneWeights(vs, boneWeight1s);
+                SkinnedMeshRenderer skinnedMesh = objectToCut.GetComponent<SkinnedMeshRenderer>();
+                positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = positiveSideMeshData;
 
-            GameObject boneObjects = GameObject.Instantiate(root);
-            boneObjects.transform.parent = positiveObject.transform;
-            boneObjects.transform.localPosition = new Vector3(0, 0, 0);
-            positiveObject.GetComponent<SkinnedMeshRenderer>().bones = boneObjects.GetComponentsInChildren<Transform>();
+                NativeArray<BoneWeight1> boneWeight1s = new NativeArray<BoneWeight1>(1081, Allocator.Persistent);
+                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.vertInOrigin.Count, Allocator.Persistent);
+
+                // Get the number of bone weights per vertex
+                var bonesPerVertex = skinnedMesh.sharedMesh.GetBonesPerVertex();
+
+                // Get all the bone weights, in vertex index order
+                var boneWeights = skinnedMesh.sharedMesh.GetAllBoneWeights();
+
+                // Keep track of where we are in the array of BoneWeights, as we iterate over the vertices
+                var boneWeightIndex = 0;
+
+                List<int> selectedOrders = new List<int>();
+                List<BoneWeight1> boneWeight1sforNative = new List<BoneWeight1>();
+                // Iterate over the vertices
+                for (var vertIndex = 0; vertIndex < skinnedMesh.sharedMesh.vertexCount; vertIndex++)
+                {
+                    bool debug = false;
+                    int order = 0;
+                    for (int z = 0; z < slicesMeta.vertInOrigin.Count; z++)
+                    {
+                        if (vertIndex == slicesMeta.vertInOrigin[z])
+                        {
+                            debug = true;
+                            
+                            order = z;
+                            break;
+                        }
+                    }
+
+                    var totalWeight = 0f;
+                    var numberOfBonesForThisVertex = bonesPerVertex[vertIndex];
+                    if (debug == true)
+                    {
+                        vs[order] = numberOfBonesForThisVertex;
+                    }
+                        
+                    // For each vertex, iterate over its BoneWeights
+                    for (var i = 0; i < numberOfBonesForThisVertex; i++)
+                    {
+                        var currentBoneWeight = boneWeights[boneWeightIndex];
+                        totalWeight += currentBoneWeight.weight;
+                        if (i > 0)
+                        {
+                            Debug.Assert(boneWeights[boneWeightIndex - 1].weight >= currentBoneWeight.weight);
+                        }
+                        if (debug == true)
+                        {
+                            int biggest = 0;
+                            for (int count = 0; count < selectedOrders.Count; count++)
+                            {
+                                if (selectedOrders[count] < order )
+                                    biggest++;
+                            }
+
+                            if (biggest == selectedOrders.Count)
+                            {
+                                boneWeight1sforNative.Add(currentBoneWeight);
+                            }
+                            else
+                            {
+                                boneWeight1sforNative.Insert(biggest, currentBoneWeight);
+                            }
+
+                            selectedOrders.Add(order);
+                        }  
+                        boneWeightIndex++;
+                    }
+                    Debug.Assert(Mathf.Approximately(1f, totalWeight));
+                }
+                
+                for (int boneCount = 0; boneCount < vs.Length; boneCount++)
+                {
+                    bool isNull = true;
+                    for (int selectComp = 0; selectComp < selectedOrders.Count; selectComp++)
+                    {
+                        if (boneCount == selectedOrders[selectComp])
+                        {
+                            isNull = false;
+                        }
+                    }
+
+                    if (isNull == true)
+                    {
+                        vs[boneCount] = 1;
+                        int biggest = 0;
+                        for (int count = 0; count < selectedOrders.Count; count++)
+                        {
+                            if (selectedOrders[count] < boneCount)
+                            {
+                                biggest++;
+                            }
+                        }
+
+                        BoneWeight1 boneWeight1 = new BoneWeight1();
+                        boneWeight1.boneIndex = 28;
+                        boneWeight1.weight = 1;
+                        if (biggest == selectedOrders.Count)
+                        {
+                            boneWeight1sforNative.Add(boneWeight1);
+                        }
+                        else
+                        {
+                            boneWeight1sforNative.Insert(biggest, boneWeight1);
+                        }
+
+                        selectedOrders.Add(boneCount);
+                    }
+                }
+
+                for (int count = 0; count < boneWeight1sforNative.Count; count++)
+                {
+                    boneWeight1s[count] = boneWeight1sforNative[count];
+                }
+                positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.SetBoneWeights(vs, boneWeight1s);
+                
+                GameObject boneObjects = GameObject.Instantiate(root);
+                boneObjects.transform.parent = positiveObject.transform;
+                boneObjects.transform.localPosition = new Vector3(0, 0, 0);
+
+                Transform[] slicedBones = new Transform[objectToCut.GetComponent<SkinnedMeshRenderer>().bones.Length];
+                for (int boneNum = 0; boneNum < objectToCut.GetComponent<SkinnedMeshRenderer>().bones.Length; boneNum++)
+                {
+                    for (int bone2Num = 0; bone2Num < boneObjects.GetComponentsInChildren<Transform>().Length; bone2Num++)
+                    {
+                        if (objectToCut.GetComponent<SkinnedMeshRenderer>().bones[boneNum].name == boneObjects.GetComponentsInChildren<Transform>()[bone2Num].name)
+                        {
+                            slicedBones[boneNum] = boneObjects.GetComponentsInChildren<Transform>()[bone2Num];
+                            slicedBones[boneNum].name = boneObjects.GetComponentsInChildren<Transform>()[bone2Num].name;
+                            if (boneObjects.GetComponentsInChildren<Transform>()[bone2Num].parent != null)
+                            {
+                                slicedBones[boneNum].parent = boneObjects.GetComponentsInChildren<Transform>()[bone2Num].parent;
+                                slicedBones[boneNum].parent.name = boneObjects.GetComponentsInChildren<Transform>()[bone2Num].parent.name;
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                for (int boneNum = 0; boneNum < slicedBones.Length; boneNum++)
+                {
+                    if (slicedBones[boneNum].parent != null)
+                    {
+                        for (int bone2Num = 0; bone2Num < objectToCut.GetComponent<SkinnedMeshRenderer>().bones.Length; bone2Num++)
+                        {
+                            if (slicedBones[boneNum].parent.name == slicedBones[bone2Num].name)
+                            {
+                                slicedBones[boneNum].parent = slicedBones[bone2Num];
+                            }
+                        }
+                    }
+                }
+                positiveObject.GetComponent<SkinnedMeshRenderer>().bones = slicedBones;
+                positiveObject.GetComponent<SkinnedMeshRenderer>().rootBone = slicedBones[0].GetChild(0).GetChild(0);
+
+                Matrix4x4[] bindPoses = new Matrix4x4[52];
+                for (int b = 0; b < 52; b++)
+                {
+                    bindPoses[b] = positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].worldToLocalMatrix * positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].root.transform.localToWorldMatrix;
+                }
+                positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.bindposes = bindPoses;
+                negativeObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = negativeSideMeshData;
+            }
             
-            Matrix4x4[] bindPoses = new Matrix4x4[62];
-            for (int b = 0; b < 62; b++)
-            {
-                bindPoses[b] = positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].worldToLocalMatrix * positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].parent.transform.localToWorldMatrix;
-            }
-            positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.bindposes = bindPoses;
-            Debug.Log(positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh.bindposes.Length);
-
-            negativeObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = negativeSideMeshData;
-
             SetupCollidersAndRigidBodys(ref positiveObject, positiveSideMeshData, sliceable.UseGravity);
             SetupCollidersAndRigidBodys(ref negativeObject, negativeSideMeshData, sliceable.UseGravity);
 
@@ -85,22 +237,43 @@ namespace Assets.Scripts
         /// </summary>
         /// <param name="originalObject">The original object.</param>
         /// <returns></returns>
-        private static GameObject CreateMeshGameObject(GameObject originalObject)
+        private static GameObject CreateMeshGameObject(GameObject originalObject, bool isMeshRend = true)
         {
-            var originalMaterial = originalObject.GetComponent<SkinnedMeshRenderer>().materials;
-
+            var originalMaterial = new Material[4];
+            if (isMeshRend)
+            {
+                originalMaterial = originalObject.GetComponent<MeshRenderer>().materials;
+            }
+            else
+            {
+               originalMaterial = originalObject.GetComponent<SkinnedMeshRenderer>().materials;
+            }
             GameObject meshGameObject = new GameObject();
             Sliceable originalSliceable = originalObject.GetComponent<Sliceable>();
 
             meshGameObject.AddComponent<MeshFilter>();
-            meshGameObject.AddComponent<SkinnedMeshRenderer>();
+            if (isMeshRend)
+            {
+                meshGameObject.AddComponent<MeshRenderer>();
+            }
+            else
+            {
+                meshGameObject.AddComponent<SkinnedMeshRenderer>();
+            }
             Sliceable sliceable = meshGameObject.AddComponent<Sliceable>();
 
             sliceable.IsSolid = originalSliceable.IsSolid;
             sliceable.ReverseWireTriangles = originalSliceable.ReverseWireTriangles;
             sliceable.UseGravity = originalSliceable.UseGravity;
 
-            meshGameObject.GetComponent<SkinnedMeshRenderer>().materials = originalMaterial;
+            if (isMeshRend)
+            {
+                meshGameObject.GetComponent<MeshRenderer>().materials = originalMaterial;
+            }
+            else
+            {
+                meshGameObject.GetComponent<SkinnedMeshRenderer>().materials = originalMaterial;
+            }
 
             meshGameObject.transform.localScale = originalObject.transform.localScale;
             meshGameObject.transform.rotation = originalObject.transform.rotation;
@@ -124,50 +297,6 @@ namespace Assets.Scripts
 
             var rb = gameObject.AddComponent<Rigidbody>();
             rb.useGravity = useGravity;
-        }
-    }
-}
-
-public class TestSkinnedMesh : MonoBehaviour
-{
-    void Start()
-    {
-        // Get a reference to the mesh
-        var skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
-        var mesh = skinnedMeshRenderer.sharedMesh;
-
-        // Get the number of bone weights per vertex
-        var bonesPerVertex = mesh.GetBonesPerVertex();
-        if (bonesPerVertex.Length == 0)
-        {
-            return;
-        }
-
-        // Get all the bone weights, in vertex index order
-        var boneWeights = mesh.GetAllBoneWeights();
-
-        // Keep track of where we are in the array of BoneWeights, as we iterate over the vertices
-        var boneWeightIndex = 0;
-
-        // Iterate over the vertices
-        for (var vertIndex = 0; vertIndex < mesh.vertexCount; vertIndex++)
-        {
-            var totalWeight = 0f;
-            var numberOfBonesForThisVertex = bonesPerVertex[vertIndex];
-            Debug.Log("This vertex has " + numberOfBonesForThisVertex + " bone influences");
-
-            // For each vertex, iterate over its BoneWeights
-            for (var i = 0; i < numberOfBonesForThisVertex; i++)
-            {
-                var currentBoneWeight = boneWeights[boneWeightIndex];
-                totalWeight += currentBoneWeight.weight;
-                if (i > 0)
-                {
-                    Debug.Assert(boneWeights[boneWeightIndex - 1].weight >= currentBoneWeight.weight);
-                }
-                boneWeightIndex++;
-            }
-            Debug.Assert(Mathf.Approximately(1f, totalWeight));
         }
     }
 }

@@ -28,7 +28,7 @@ namespace Assets.Scripts
         private List<int> _positiveSideTriangles;
         private List<Vector2> _positiveSideUvs;
         private List<Vector3> _positiveSideNormals;
-        public List<int> vert_boneInfos;
+        public List<int> vertInOrigin = new List<int>();
 
         private Mesh _negativeSideMesh;
         private List<Vector3> _negativeSideVertices;
@@ -89,6 +89,29 @@ namespace Assets.Scripts
             }
         }
 
+        public SlicesMetadata(Plane plane, GameObject gameObject, Mesh mesh, bool isSolid, bool createReverseTriangleWindings, bool shareVertices, bool smoothVertices)
+        {
+            _positiveSideTriangles = new List<int>();
+            _positiveSideVertices = new List<Vector3>();
+            _negativeSideTriangles = new List<int>();
+            _negativeSideVertices = new List<Vector3>();
+            _positiveSideUvs = new List<Vector2>();
+            _negativeSideUvs = new List<Vector2>();
+            _positiveSideNormals = new List<Vector3>();
+            _negativeSideNormals = new List<Vector3>();
+            _pointsAlongPlane = new List<Vector3>();
+            _plane = plane;
+            sliceObject = gameObject;
+            bones = gameObject.transform.GetComponentsInChildren<Transform>();
+            _mesh = mesh;
+            _isSolid = isSolid;
+            _createReverseTriangleWindings = createReverseTriangleWindings;
+            _useSharedVertices = shareVertices;
+            _smoothVertices = smoothVertices;
+
+            ComputeNewMeshes();
+        }
+
         public SlicesMetadata(Plane plane, GameObject gameObject, SkinnedMeshRenderer skinnedMeshRenderer, Mesh mesh, bool isSolid, bool createReverseTriangleWindings, bool shareVertices, bool smoothVertices)
         {
             _positiveSideTriangles = new List<int>();
@@ -124,15 +147,15 @@ namespace Assets.Scripts
         /// <param name="vertex3"></param>
         /// <param name="vertex3Uv"></param>
         /// <param name="shareVertices"></param>
-        private void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+        private void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
         {
             if (side == MeshSide.Positive)
             {
-                AddTrianglesNormalsAndUvs(ref _positiveSideVertices, ref _positiveSideTriangles, ref _positiveSideNormals, ref _positiveSideUvs, vertex1, normal1, uv1, vertex2, normal2, uv2, vertex3, normal3, uv3, shareVertices, addFirst);
+                AddTrianglesNormalsAndUvs(ref _positiveSideVertices, ref _positiveSideTriangles, ref _positiveSideNormals, ref _positiveSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
             }
             else
             {
-                AddTrianglesNormalsAndUvs(ref _negativeSideVertices, ref _negativeSideTriangles, ref _negativeSideNormals, ref _negativeSideUvs, vertex1, normal1, uv1, vertex2, normal2, uv2, vertex3, normal3, uv3, shareVertices, addFirst);
+                AddTrianglesNormalsAndUvs(ref _negativeSideVertices, ref _negativeSideTriangles, ref _negativeSideNormals, ref _negativeSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
             }
         }
 
@@ -159,7 +182,7 @@ namespace Assets.Scripts
         /// 
 
         public int count;
-        private void AddTrianglesNormalsAndUvs(ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector3> normals, ref List<Vector2> uvs, Vector3 vertex1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+        private void AddTrianglesNormalsAndUvs(ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector3> normals, ref List<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
         {
             int tri1Index = vertices.IndexOf(vertex1);
 
@@ -180,27 +203,13 @@ namespace Assets.Scripts
                     normal1 = ComputeNormal(vertex1, vertex2, vertex3);                    
                 }
 
-                if (vertices == _positiveSideVertices)
-                {
-                    float distance = 1000;
-                    int closestBone = 0;
-                    for (int b = 0; b < bones.Length; b++)
-                    {
-                        if (Vector3.Distance(vertex1, bones[b].position) < distance)
-                        {
-                            distance = Vector3.Distance(vertex1, bones[b].position);
-                            closestBone = b;
-                        }
-                    }
-                }
-
                 int? i = null;
                 if (addFirst)
                 {
                     i = 0;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex1, (Vector3)normal1, uv1, i);
+                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex1, num1, (Vector3)normal1, uv1, i);
             }
 
             int tri2Index = vertices.IndexOf(vertex2);
@@ -216,28 +225,13 @@ namespace Assets.Scripts
                     normal2 = ComputeNormal(vertex2, vertex3, vertex1);
                 }
 
-                if (vertices == _positiveSideVertices)
-                {
-                    float distance = 1000;
-                    int closestBone = 0;
-                    for (int b = 0; b < bones.Length; b++)
-                    {
-                        if (Vector3.Distance(vertex2, bones[b].position) < distance)
-                        {
-                            distance = Vector3.Distance(vertex2, bones[b].position);
-                            closestBone = b;
-                        }
-                    }
-                }
-
                 int? i = null;
-                
                 if (addFirst)
                 {
                     i = 1;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex2, (Vector3)normal2, uv2, i);
+                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex2, num2, (Vector3)normal2, uv2, i);
             }
 
             int tri3Index = vertices.IndexOf(vertex3);
@@ -259,11 +253,11 @@ namespace Assets.Scripts
                     i = 2;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex3, (Vector3)normal3, uv3, i);
+                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex3, num3, (Vector3)normal3, uv3, i);
             }
         }
-
-        private void AddVertNormalUv(ref List<Vector3> vertices, ref List<Vector3> normals, ref List<Vector2> uvs, ref List<int> triangles, Vector3 vertex, Vector3 normal, Vector2 uv, int? index)
+        
+        private void AddVertNormalUv(ref List<Vector3> vertices, ref List<Vector3> normals, ref List<Vector2> uvs, ref List<int> triangles, Vector3 vertex, int num, Vector3 normal, Vector2 uv, int? index)
         {
             if (index != null)
             {
@@ -275,19 +269,7 @@ namespace Assets.Scripts
 
                 if (vertices == _positiveSideVertices)
                 {
-                    int bone = 0;
-                    float distance = 1000;
-                    for (int a = 0; a < bones.Length; a++)
-                    {
-                        if (Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position) < distance)
-                        {
-                            distance = Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position);
-                            bone = a;
-                            
-                        }
-                    }
-                    Debug.Log(bones[bone]);
-                    vert_boneInfos.Insert(i, bone);
+                    vertInOrigin.Insert(i, num);
                 }
             }
             else
@@ -299,24 +281,9 @@ namespace Assets.Scripts
 
                 if (vertices == _positiveSideVertices)
                 {
-                    int bone = 0;
-                    float distance = 1000;
-                    for (int a = 0; a < bones.Length; a++)
-                    {
-                        if (Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position) < distance)
-                        {
-                            distance = Vector3.Distance(sliceObject.transform.TransformPoint(vertex), bones[a].position);
-                            bone = a;
-
-                        }
-                    }
-                    Debug.Log(bones[bone]);
-                    vert_boneInfos.Add(bone);
+                    vertInOrigin.Add(num);
                 }
             }
-
-            if (vertices == _positiveSideVertices)
-                count++;
         }
 
         private void ShiftTriangleIndeces(ref List<int> triangles)
@@ -387,16 +354,17 @@ namespace Assets.Scripts
                 normal3.Normalize();
 
                 var direction = Vector3.Dot(normal3, _plane.normal);
+                int boneNum = -1;
 
-                if(direction > 0)
+                if (direction > 0)
                 {                                        
-                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, -normal3, Vector2.zero, firstVertex, -normal3, Vector2.zero, secondVertex, -normal3, Vector2.zero, false, true);
-                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, normal3, Vector2.zero, secondVertex, normal3, Vector2.zero, firstVertex, normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, boneNum, -normal3, Vector2.zero, firstVertex, boneNum, -normal3, Vector2.zero, secondVertex, boneNum, -normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, boneNum, normal3, Vector2.zero, secondVertex, boneNum, normal3, Vector2.zero, firstVertex, boneNum, normal3, Vector2.zero, false, true);
                 }
                 else
                 {
-                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, normal3, Vector2.zero, secondVertex, normal3, Vector2.zero, firstVertex, normal3, Vector2.zero, false, true);
-                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, -normal3, Vector2.zero, firstVertex, -normal3, Vector2.zero, secondVertex, -normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, boneNum, normal3, Vector2.zero, secondVertex, boneNum, normal3, Vector2.zero, firstVertex, boneNum, normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, boneNum, -normal3, Vector2.zero, firstVertex, boneNum, -normal3, Vector2.zero, secondVertex, boneNum, -normal3, Vector2.zero, false, true);
                 }               
             }
         }
@@ -466,10 +434,6 @@ namespace Assets.Scripts
             Vector3[] meshNormals = _mesh.normals;
             Vector2[] meshUvs = _mesh.uv;
 
-            var boneWeight = _mesh.GetAllBoneWeights();
-            var perVert = _mesh.GetBonesPerVertex();
-            vert_boneInfos = new List<int>();
-
             for (int i = 0; i < meshTriangles.Length; i += 3)
             {
                 //We need the verts in order so that we know which way to wind our new mesh triangles.
@@ -496,7 +460,7 @@ namespace Assets.Scripts
                 {
                     //Add the relevant triangle
                     MeshSide side = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
-                    AddTrianglesNormalAndUvs(side, vert1, normal1, uv1, vert2, normal2, uv2, vert3, normal3, uv3, true, false);
+                    AddTrianglesNormalAndUvs(side, vert1, meshTriangles[i], normal1, uv1, vert2, meshTriangles[i + 1], normal2, uv2, vert3, meshTriangles[i + 2], normal3, uv3, true, false);
                 }
                 else
                 {
@@ -517,11 +481,13 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, uv3, vert1, uv1, out intersection2Uv);
 
+                        int boneNum = -1;
+                        int boneNum2 = -1;
                         //Add the positive or negative triangles
-                        AddTrianglesNormalAndUvs(side1, vert1, null, uv1, vert2, null, uv2, intersection1, null, intersection1Uv, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side1, vert1, null, uv1, intersection1, null, intersection1Uv, intersection2, null, intersection2Uv, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, vert2, meshTriangles[i + 1], null, uv2, intersection1, boneNum, null, intersection1Uv, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
 
-                        AddTrianglesNormalAndUvs(side2, intersection1, null, intersection1Uv, vert3, null, uv3, intersection2, null, intersection2Uv, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 1], null, uv3, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
 
                     }
                     //vert 1 and 3 are on the same side
@@ -531,11 +497,14 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection2Uv);
 
-                        //Add the positive triangles
-                        AddTrianglesNormalAndUvs(side1, vert1, null, uv1, intersection1, null, intersection1Uv, vert3, null, uv3, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side1, intersection1, null, intersection1Uv, intersection2, null, intersection2Uv, vert3, null, uv3, _useSharedVertices, false);
+                        int boneNum = -1;
+                        int boneNum2 = -1;
 
-                        AddTrianglesNormalAndUvs(side2, intersection1, null, intersection1Uv, vert2, null, uv2, intersection2, null, intersection2Uv, _useSharedVertices, false);
+                        //Add the positive triangles
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 2], null, uv3, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, vert3, meshTriangles[i + 2], null, uv3, _useSharedVertices, false);
+
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles[i + 2], null, uv2, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
                     }
                     //Vert1 is alone
                     else
@@ -544,10 +513,13 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert3, uv3, out intersection2Uv);
 
-                        AddTrianglesNormalAndUvs(side1, vert1, null, uv1, intersection1, null, intersection1Uv, intersection2, null, intersection2Uv, _useSharedVertices, false);
+                        int boneNum = -1;
+                        int boneNum2 = -1;
 
-                        AddTrianglesNormalAndUvs(side2, intersection1, null, intersection1Uv, vert2, null, uv2, vert3, null, uv3, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side2, intersection1, null, intersection1Uv, vert3, null, uv3, intersection2, null, intersection2Uv, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
+
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles[i + 1], null, uv2, vert3, meshTriangles[i + 2], null, uv3, _useSharedVertices, false);
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 2], null, uv3, intersection2, boneNum, null, intersection2Uv, _useSharedVertices, false);
                     }
 
                     //Add the newly created points on the plane.
