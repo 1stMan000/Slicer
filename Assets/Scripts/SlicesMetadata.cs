@@ -424,6 +424,8 @@ namespace Assets.Scripts
             }
         }
 
+        Dictionary<Vector3[], Vector3[]> trianglesOfPlane = new Dictionary<Vector3[], Vector3[]>();
+
         /// <summary>
         /// Compute the positive and negative meshes based on the plane and mesh
         /// </summary>
@@ -481,6 +483,8 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, uv3, vert1, uv1, out intersection2Uv);
 
+                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] {intersection1, intersection2});
+
                         int boneNum = -1;
                         int boneNum2 = -1;
                         //Add the positive or negative triangles
@@ -488,7 +492,6 @@ namespace Assets.Scripts
                         AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
 
                         AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 1], null, uv3, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
-
                     }
                     //vert 1 and 3 are on the same side
                     else if (vert1Side == vert3Side)
@@ -496,6 +499,8 @@ namespace Assets.Scripts
                         //Cast a ray from v1 to v2 and from v2 to v3 to get the intersections                       
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection2Uv);
+
+                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
                         int boneNum = -1;
                         int boneNum2 = -1;
@@ -512,6 +517,8 @@ namespace Assets.Scripts
                         //Cast a ray from v1 to v2 and from v1 to v3 to get the intersections                       
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert3, uv3, out intersection2Uv);
+
+                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
                         int boneNum = -1;
                         int boneNum2 = -1;
@@ -531,6 +538,92 @@ namespace Assets.Scripts
             //If the object is solid, join the new points along the plane otherwise do the reverse winding
             if (_isSolid)
             {
+                List<List<Vector3>> vericesPlane = new List<List<Vector3>>();
+                List<Vector3> planeVectors1 = new List<Vector3>();
+                List<Vector3> planeVectors2 = new List<Vector3>();
+
+                foreach (KeyValuePair<Vector3[], Vector3[]> pair in trianglesOfPlane)
+                {
+                    foreach (KeyValuePair<Vector3[], Vector3[]> pairCompare in trianglesOfPlane)
+                    {
+                        if (pairCompare.Key != pair.Key)
+                        {
+                            Vector3[] fromPair = pair.Value;
+                            Vector3[] fromPairCompare = pairCompare.Value;
+
+                            for (int a = 0; a < pair.Value.Length; a++)
+                            {
+                                for (int b = 0; b < pairCompare.Value.Length; b++)
+                                {
+                                    if (fromPair[a] == fromPairCompare[b])
+                                    {
+                                        List<Vector3> vector3s = new List<Vector3>();
+                                        vector3s.Add(pair.Value[0]);
+                                        vector3s.Add(pair.Value[1]);
+                                        if (b == 0)
+                                            vector3s.Add(fromPairCompare[1]);
+                                        else if (b == 1)
+                                            vector3s.Add(fromPairCompare[0]);
+                                        vericesPlane.Add(vector3s);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                int lenghtOf = vericesPlane.Count;
+                Debug.Log(lenghtOf);
+                for (int i = 1; i < lenghtOf; i++)
+                {
+                    bool isConnect = false;
+                    for (int a = 0; a < vericesPlane[0].Count; a++)
+                    {
+                        if (vericesPlane[i].Contains(vericesPlane[0][a]))
+                        {
+                            isConnect = true;
+                            vericesPlane[i].Remove(vericesPlane[0][a]);
+                        }
+                    }
+                    
+                    if (isConnect == true)
+                    {
+                        for (int b = 0; b < vericesPlane[i].Count; b++)
+                        {
+                            vericesPlane[0].Add(vericesPlane[i][b]);
+                        }
+                        vericesPlane.Remove(vericesPlane[i]);
+
+                        lenghtOf = vericesPlane.Count;
+                        i = 0;
+                    }
+                }
+                Debug.Log(lenghtOf);
+                for (int i = 2; i < lenghtOf; i++)
+                {
+                    bool isConnect = false;
+                    for (int a = 0; a < vericesPlane[1].Count; a++)
+                    {
+                        if (vericesPlane[i].Contains(vericesPlane[1][a]))
+                        {
+                            isConnect = true;
+                            vericesPlane[i].Remove(vericesPlane[1][a]);
+                        }
+                    }
+
+                    if (isConnect == true)
+                    {
+                        for (int b = 0; b < vericesPlane[i].Count; b++)
+                        {
+                            vericesPlane[1].Add(vericesPlane[i][b]);
+                        }
+                        vericesPlane.Remove(vericesPlane[i]);
+                        
+                        lenghtOf = vericesPlane.Count;
+                        i = 1;
+                    }
+                }
+                Debug.Log(vericesPlane.Count);
                 JoinPointsAlongPlane();
             }
             else if (_createReverseTriangleWindings)
@@ -542,7 +635,6 @@ namespace Assets.Scripts
             {
                 SmoothVertices();
             }
-
         }
 
         /// <summary>
