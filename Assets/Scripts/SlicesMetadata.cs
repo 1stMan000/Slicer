@@ -335,6 +335,37 @@ namespace Assets.Scripts
             }
         }
 
+        private void JoinPointsAlongPlane(List<Vector3> connectedPointsAlongPlane)
+        {
+            Vector3 halfway = GetHalfwayPoint(connectedPointsAlongPlane, out float distance);
+
+            for (int i = 0; i < connectedPointsAlongPlane.Count; i += 2)
+            {
+                Vector3 firstVertex;
+                Vector3 secondVertex;
+
+                firstVertex = connectedPointsAlongPlane[i];
+                secondVertex = connectedPointsAlongPlane[i + 1];
+
+                Vector3 normal3 = ComputeNormal(halfway, secondVertex, firstVertex);
+                normal3.Normalize();
+
+                var direction = Vector3.Dot(normal3, _plane.normal);
+                int boneNum = -1;
+
+                if (direction > 0)
+                {
+                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, boneNum, -normal3, Vector2.zero, firstVertex, boneNum, -normal3, Vector2.zero, secondVertex, boneNum, -normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, boneNum, normal3, Vector2.zero, secondVertex, boneNum, normal3, Vector2.zero, firstVertex, boneNum, normal3, Vector2.zero, false, true);
+                }
+                else
+                {
+                    AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, boneNum, normal3, Vector2.zero, secondVertex, boneNum, normal3, Vector2.zero, firstVertex, boneNum, normal3, Vector2.zero, false, true);
+                    AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, boneNum, -normal3, Vector2.zero, firstVertex, boneNum, -normal3, Vector2.zero, secondVertex, boneNum, -normal3, Vector2.zero, false, true);
+                }
+            }
+        }
+
         /// <summary>
         /// Join the points along the plane to the halfway point
         /// </summary>
@@ -366,6 +397,35 @@ namespace Assets.Scripts
                     AddTrianglesNormalAndUvs(MeshSide.Positive, halfway, boneNum, normal3, Vector2.zero, secondVertex, boneNum, normal3, Vector2.zero, firstVertex, boneNum, normal3, Vector2.zero, false, true);
                     AddTrianglesNormalAndUvs(MeshSide.Negative, halfway, boneNum, -normal3, Vector2.zero, firstVertex, boneNum, -normal3, Vector2.zero, secondVertex, boneNum, -normal3, Vector2.zero, false, true);
                 }               
+            }
+        }
+
+        private Vector3 GetHalfwayPoint(List<Vector3> vectors, out float distance)
+        {
+            if (vectors.Count > 0)
+            {
+                Vector3 firstPoint = vectors[0];
+                Vector3 furthestPoint = Vector3.zero;
+                distance = 0f;
+
+                foreach (Vector3 point in vectors)
+                {
+                    float currentDistance = 0f;
+                    currentDistance = Vector3.Distance(firstPoint, point);
+
+                    if (currentDistance > distance)
+                    {
+                        distance = currentDistance;
+                        furthestPoint = point;
+                    }
+                }
+
+                return Vector3.Lerp(firstPoint, furthestPoint, 0.5f);
+            }
+            else
+            {
+                distance = 0;
+                return Vector3.zero;
             }
         }
 
@@ -541,7 +601,7 @@ namespace Assets.Scripts
                 List<List<Vector3>> vericesPlane = new List<List<Vector3>>();
                 List<Vector3> planeVectors1 = new List<Vector3>();
                 List<Vector3> planeVectors2 = new List<Vector3>();
-
+                Debug.Log(trianglesOfPlane.Count);
                 foreach (KeyValuePair<Vector3[], Vector3[]> pair in trianglesOfPlane)
                 {
                     foreach (KeyValuePair<Vector3[], Vector3[]> pairCompare in trianglesOfPlane)
@@ -560,10 +620,8 @@ namespace Assets.Scripts
                                         List<Vector3> vector3s = new List<Vector3>();
                                         vector3s.Add(pair.Value[0]);
                                         vector3s.Add(pair.Value[1]);
-                                        if (b == 0)
-                                            vector3s.Add(fromPairCompare[1]);
-                                        else if (b == 1)
-                                            vector3s.Add(fromPairCompare[0]);
+                                        vector3s.Add(fromPairCompare[0]);
+                                        vector3s.Add(fromPairCompare[1]);
                                         vericesPlane.Add(vector3s);
                                     }
                                 }
@@ -573,7 +631,6 @@ namespace Assets.Scripts
                 }
                 
                 int lenghtOf = vericesPlane.Count;
-                Debug.Log(lenghtOf);
                 for (int i = 1; i < lenghtOf; i++)
                 {
                     bool isConnect = false;
@@ -598,7 +655,7 @@ namespace Assets.Scripts
                         i = 0;
                     }
                 }
-                Debug.Log(lenghtOf);
+                
                 for (int i = 2; i < lenghtOf; i++)
                 {
                     bool isConnect = false;
@@ -623,8 +680,37 @@ namespace Assets.Scripts
                         i = 1;
                     }
                 }
-                Debug.Log(vericesPlane.Count);
-                JoinPointsAlongPlane();
+
+                if (vericesPlane.Count == 1)
+                {
+                    JoinPointsAlongPlane();
+                }
+                else
+                {
+                    List<Vector3> inOrder1 = new List<Vector3>();
+                    for (int i = 0; i < _pointsAlongPlane.Count - 2; i += 2)
+                    {
+                        if (vericesPlane[0].Contains(_pointsAlongPlane[i]) == true)
+                        {
+                            inOrder1.Add(_pointsAlongPlane[i]);
+                            inOrder1.Add(_pointsAlongPlane[i + 1]);
+                        }
+                    }
+                    Debug.Log(vericesPlane[0].Count);
+                    List<Vector3> inOrder2 = new List<Vector3>();
+                    for (int i = 0; i < _pointsAlongPlane.Count - 2; i += 2)
+                    {
+                        if (vericesPlane[1].Contains(_pointsAlongPlane[i]) == true)
+                        {
+                            inOrder2.Add(_pointsAlongPlane[i]);
+                            inOrder2.Add(_pointsAlongPlane[i + 1]);
+                        }
+                    }
+                    Debug.Log(vericesPlane[1].Count);
+                    JoinPointsAlongPlane(vericesPlane[0]);
+                    JoinPointsAlongPlane(vericesPlane[1]);
+                }
+                
             }
             else if (_createReverseTriangleWindings)
             {
