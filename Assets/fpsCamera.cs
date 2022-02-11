@@ -31,40 +31,40 @@ public class fpsCamera : MonoBehaviour
                 vertices = mesh.vertices;
                 foreach (Vector3 vert in vertices)
                 {
-                    modifiedVerts.Add(vert);
+                    modifiedVerts.Add(hit.transform.localToWorldMatrix.MultiplyPoint3x4(vert));
                 }
                 
-                for (int i = 0; i < mesh.triangles.Length; i += 3)
+                GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.transform.position = hit.point;
+                
+                List<int> triangles= new List<int>();
+                foreach (int triangle in mesh.triangles)
                 {
-                    int a = mesh.triangles[i];
-                    int b = mesh.triangles[i + 1];
-                    int c = mesh.triangles[i + 2];
+                    triangles.Add(triangle);
+                }
 
-                    bool onTriangle = true;
-                    Vector3 cp1 = Vector3.Cross(modifiedVerts[b] - modifiedVerts[a], hit.point - modifiedVerts[a]);
-                    Vector3 cp2 = Vector3.Cross(modifiedVerts[b] - modifiedVerts[a], modifiedVerts[c] - modifiedVerts[a]);
-                    if (Vector3.Dot(cp1, cp2) <= 0)
+                float distance = 100;
+                Vector3 closest = new Vector3();
+                foreach (Vector3 vector in modifiedVerts)
+                {
+                    float current = Vector3.Distance(hit.point, vector);
+                    if (current < distance)
                     {
-                        onTriangle = false;
-                    }
-                    cp1 = Vector3.Cross(modifiedVerts[b] - modifiedVerts[c], hit.point - modifiedVerts[c]);
-                    cp2 = Vector3.Cross(modifiedVerts[b] - modifiedVerts[c], modifiedVerts[a] - modifiedVerts[c]);
-                    if (Vector3.Dot(cp1, cp2) <= 0)
-                    {
-                        onTriangle = false;
-                    }
-                    cp1 = Vector3.Cross(modifiedVerts[c] - modifiedVerts[a], hit.point - modifiedVerts[a]);
-                    cp2 = Vector3.Cross(modifiedVerts[c] - modifiedVerts[a], modifiedVerts[b] - modifiedVerts[a]);
-                    if (Vector3.Dot(cp1, cp2) <= 0)
-                    {
-                        onTriangle = false;
-                    }
-
-                    if (onTriangle == true)
-                    {
-                        Debug.Log(true);
+                        distance = current;
+                        closest = vector;
                     }
                 }
+
+                modifiedVerts[modifiedVerts.IndexOf(closest)] = modifiedVerts[modifiedVerts.IndexOf(closest)] + new Vector3(0, -10, 0);
+                List<Vector3> localVerts = new List<Vector3>();
+                foreach (Vector3 vert in modifiedVerts)
+                {
+                    localVerts.Add(hit.transform.worldToLocalMatrix.MultiplyPoint3x4(vert));
+                }
+                mesh.vertices = localVerts.ToArray();
+                mesh.triangles = triangles.ToArray();
+
+                hit.transform.GetComponent<MeshCollider>().sharedMesh = hit.transform.GetComponent<MeshFilter>().mesh;
             }
             else
             {
@@ -95,5 +95,42 @@ public class fpsCamera : MonoBehaviour
         dir.z = Input.GetAxis("Vertical");
 
         transform.Translate(dir * moveSpeed * Time.deltaTime);
+    }
+}
+
+class GFG
+{
+
+    /* A utility function to calculate area of triangle
+    formed by (x1, y1) (x2, y2) and (x3, y3) */
+    static float area(float x1, float y1, float x2,
+                       float y2, float x3, float y3)
+    {
+        return Mathf.Abs((x1 * (y2 - y3) +
+                         x2 * (y3 - y1) +
+                         x3 * (y1 - y2)) / 2.0f);
+    }
+
+    /* A function to check whether point P(x, y) lies
+    inside the triangle formed by A(x1, y1),
+    B(x2, y2) and C(x3, y3) */
+    public bool isInside(float x1, float y1, float x2,
+                         float y2, float x3, float y3,
+                         float x, float y)
+    {
+        /* Calculate area of triangle ABC */
+        float A = area(x1, y1, x2, y2, x3, y3);
+
+        /* Calculate area of triangle PBC */
+        float A1 = area(x, y, x2, y2, x3, y3);
+
+        /* Calculate area of triangle PAC */
+        float A2 = area(x1, y1, x, y, x3, y3);
+
+        /* Calculate area of triangle PAB */
+        float A3 = area(x1, y1, x2, y2, x, y);
+
+        /* Check if sum of A1, A2 and A3 is same as A */
+        return (A == A1 + A2 + A3);
     }
 }
