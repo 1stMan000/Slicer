@@ -28,7 +28,7 @@ namespace Assets.Scripts
         private List<int> _positiveSideTriangles;
         private List<Vector2> _positiveSideUvs;
         private List<Vector3> _positiveSideNormals;
-        public List<int> vertInOrigin = new List<int>();
+        public List<int> orderOfVertInOriginalMesh = new List<int>();
 
         private Mesh _negativeSideMesh;
         private List<Vector3> _negativeSideVertices;
@@ -269,7 +269,7 @@ namespace Assets.Scripts
 
                 if (vertices == _positiveSideVertices)
                 {
-                    vertInOrigin.Insert(i, num);
+                    orderOfVertInOriginalMesh.Insert(i, num);
                 }
             }
             else
@@ -281,7 +281,7 @@ namespace Assets.Scripts
 
                 if (vertices == _positiveSideVertices)
                 {
-                    vertInOrigin.Add(num);
+                    orderOfVertInOriginalMesh.Add(num);
                 }
             }
         }

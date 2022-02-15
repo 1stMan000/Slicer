@@ -136,7 +136,7 @@ public class Lighsaber : MonoBehaviour
         Vector3 normal = Vector3.Cross(side1, side2).normalized;
 
         //Transform the normal so that it is aligned with the object we are slicing's transform.
-        Vector3 transformedNormal = ((Vector3)(other.gameObject.transform.localToWorldMatrix.transpose * normal)).normalized;
+        Vector3 transformedNormal = ((Vector3)(other.gameObject.transform.root.GetChild(0).localToWorldMatrix.transpose * normal)).normalized;
 
         //Get the enter position relative to the object we're cutting's local transform
         Vector3 transformedStartingPoint = other.gameObject.transform.InverseTransformPoint(_triggerEnterTipPosition);
@@ -156,6 +156,6 @@ public class Lighsaber : MonoBehaviour
         }
 
         GameObject[] slices = Slicer.Slice(plane, other.gameObject);
-        Destroy(other.gameObject);
+        Destroy(other.transform.root.gameObject);
     }
 }

@@ -17,10 +17,11 @@ namespace Assets.Scripts
         /// <param name="objectToCut"></param>
         /// <returns></returns>
         public static GameObject[] Slice(Plane plane, GameObject objectToCut)
-        {            
+        {
+            objectToCut = objectToCut.transform.root.GetChild(0).gameObject;
+
             //Get the current mesh and its verts and tris
-            Mesh mesh = objectToCut.GetComponent<MeshFilter>().mesh;
-            var a = mesh.GetSubMesh(0);
+            Mesh mesh = objectToCut.GetComponentInParent<MeshFilter>().mesh;
             Sliceable sliceable = objectToCut.GetComponent<Sliceable>();
 
             if (sliceable == null)
@@ -42,7 +43,7 @@ namespace Assets.Scripts
             else
             {
                 isMeshRend = false;
-                slicesMeta = new SlicesMetadata(plane, objectToCut.transform.parent.GetChild(1).gameObject, objectToCut.GetComponent<SkinnedMeshRenderer>(), objectToCut.GetComponent<SkinnedMeshRenderer>().sharedMesh, sliceable.IsSolid, sliceable.ReverseWireTriangles, sliceable.ShareVertices, sliceable.SmoothVertices);
+                slicesMeta = new SlicesMetadata(plane, objectToCut, objectToCut.GetComponent<SkinnedMeshRenderer>(), objectToCut.GetComponent<SkinnedMeshRenderer>().sharedMesh, sliceable.IsSolid, sliceable.ReverseWireTriangles, sliceable.ShareVertices, sliceable.SmoothVertices);
 
                 root = objectToCut.transform.root.GetChild(1).gameObject;
             }
@@ -62,7 +63,7 @@ namespace Assets.Scripts
                 SkinnedMeshRenderer skinnedMesh = objectToCut.GetComponent<SkinnedMeshRenderer>();
                 positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = positiveSideMeshData;
 
-                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.vertInOrigin.Count, Allocator.Persistent);
+                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.orderOfVertInOriginalMesh.Count, Allocator.Persistent);
 
                 // Get the number of bone weights per vertex
                 var bonesPerVertex = skinnedMesh.sharedMesh.GetBonesPerVertex();
@@ -78,24 +79,24 @@ namespace Assets.Scripts
                 // Iterate over the vertices
                 for (var vertIndex = 0; vertIndex < skinnedMesh.sharedMesh.vertexCount; vertIndex++)
                 {
-                    bool debug = false;
-                    int order = 0;
-                    for (int z = 0; z < slicesMeta.vertInOrigin.Count; z++)
+                    bool isOnPositive = false;
+                    int vertOrderByOringinalMesh = new int();
+                    for (int z = 0; z < slicesMeta.orderOfVertInOriginalMesh.Count; z++)
                     {
-                        if (vertIndex == slicesMeta.vertInOrigin[z])
+                        if (vertIndex == slicesMeta.orderOfVertInOriginalMesh[z])
                         {
-                            debug = true;
+                            isOnPositive = true;
                             
-                            order = z;
+                            vertOrderByOringinalMesh = z;
                             break;
                         }
                     }
 
                     var totalWeight = 0f;
                     var numberOfBonesForThisVertex = bonesPerVertex[vertIndex];
-                    if (debug == true)
+                    if (isOnPositive == true)
                     {
-                        vs[order] = numberOfBonesForThisVertex;
+                        vs[vertOrderByOringinalMesh] = numberOfBonesForThisVertex;
                     }
                         
                     // For each vertex, iterate over its BoneWeights
@@ -107,12 +108,12 @@ namespace Assets.Scripts
                         {
                             Debug.Assert(boneWeights[boneWeightIndex - 1].weight >= currentBoneWeight.weight);
                         }
-                        if (debug == true)
+                        if (isOnPositive == true)
                         {
                             int biggest = 0;
                             for (int count = 0; count < selectedOrders.Count; count++)
                             {
-                                if (selectedOrders[count] < order )
+                                if (selectedOrders[count] < vertOrderByOringinalMesh )
                                     biggest++;
                             }
 
@@ -125,7 +126,7 @@ namespace Assets.Scripts
                                 boneWeight1sforNative.Insert(biggest, currentBoneWeight);
                             }
 
-                            selectedOrders.Add(order);
+                            selectedOrders.Add(vertOrderByOringinalMesh);
                         }  
                         boneWeightIndex++;
                     }
@@ -246,7 +247,7 @@ namespace Assets.Scripts
             }
             else
             {
-               originalMaterial = originalObject.GetComponent<SkinnedMeshRenderer>().materials;
+               originalMaterial = originalObject.transform.root.GetChild(0).GetComponent<SkinnedMeshRenderer>().materials;
             }
             GameObject meshGameObject = new GameObject();
             Sliceable originalSliceable = originalObject.GetComponent<Sliceable>();
