@@ -601,7 +601,7 @@ namespace Assets.Scripts
                 List<List<Vector3>> vericesPlane = new List<List<Vector3>>();
                 List<Vector3> planeVectors1 = new List<Vector3>();
                 List<Vector3> planeVectors2 = new List<Vector3>();
-                Debug.Log(trianglesOfPlane.Count);
+                
                 foreach (KeyValuePair<Vector3[], Vector3[]> pair in trianglesOfPlane)
                 {
                     foreach (KeyValuePair<Vector3[], Vector3[]> pairCompare in trianglesOfPlane)
@@ -681,6 +681,31 @@ namespace Assets.Scripts
                     }
                 }
 
+                for (int i = 3; i < lenghtOf; i++)
+                {
+                    bool isConnect = false;
+                    for (int a = 0; a < vericesPlane[1].Count; a++)
+                    {
+                        if (vericesPlane[i].Contains(vericesPlane[1][a]))
+                        {
+                            isConnect = true;
+                            vericesPlane[i].Remove(vericesPlane[1][a]);
+                        }
+                    }
+
+                    if (isConnect == true)
+                    {
+                        for (int b = 0; b < vericesPlane[i].Count; b++)
+                        {
+                            vericesPlane[1].Add(vericesPlane[i][b]);
+                        }
+                        vericesPlane.Remove(vericesPlane[i]);
+
+                        lenghtOf = vericesPlane.Count;
+                        i = 1;
+                    }
+                }
+                Debug.Log(vericesPlane.Count);
                 if (vericesPlane.Count == 1)
                 {
                     JoinPointsAlongPlane();
@@ -696,7 +721,7 @@ namespace Assets.Scripts
                             inOrder1.Add(_pointsAlongPlane[i + 1]);
                         }
                     }
-                    Debug.Log(vericesPlane[0].Count);
+                    
                     List<Vector3> inOrder2 = new List<Vector3>();
                     for (int i = 0; i < _pointsAlongPlane.Count - 2; i += 2)
                     {
@@ -706,9 +731,12 @@ namespace Assets.Scripts
                             inOrder2.Add(_pointsAlongPlane[i + 1]);
                         }
                     }
-                    Debug.Log(vericesPlane[1].Count);
-                    JoinPointsAlongPlane(vericesPlane[0]);
-                    JoinPointsAlongPlane(vericesPlane[1]);
+                    
+                    for (int i = 0; i < vericesPlane.Count; i++)
+                    {
+                        Debug.Log(vericesPlane[i].Count);
+                        JoinPointsAlongPlane(vericesPlane[i]);
+                    }
                 }
                 
             }

@@ -18,7 +18,7 @@ namespace Assets.Scripts
         /// <returns></returns>
         public static GameObject[] Slice(Plane plane, GameObject objectToCut)
         {
-            objectToCut = objectToCut.transform.root.GetChild(0).gameObject;
+            //objectToCut = objectToCut.transform.root.GetChild(0).gameObject;
 
             //Get the current mesh and its verts and tris
             Mesh mesh = objectToCut.GetComponentInParent<MeshFilter>().mesh;
