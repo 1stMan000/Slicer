@@ -218,8 +218,8 @@ namespace Assets.Scripts
                 positiveObject.GetComponent<SkinnedMeshRenderer>().bones = slicedBones;
                 positiveObject.GetComponent<SkinnedMeshRenderer>().rootBone = slicedBones[0].GetChild(0).GetChild(0);
 
-                Matrix4x4[] bindPoses = new Matrix4x4[52];
-                for (int b = 0; b < 52; b++)
+                Matrix4x4[] bindPoses = new Matrix4x4[skinnedMesh.bones.Length];
+                for (int b = 0; b < skinnedMesh.bones.Length; b++)
                 {
                     bindPoses[b] = positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].worldToLocalMatrix * positiveObject.GetComponent<SkinnedMeshRenderer>().bones[b].root.transform.localToWorldMatrix;
                 }

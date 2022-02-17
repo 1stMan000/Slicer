@@ -496,6 +496,7 @@ namespace Assets.Scripts
             Vector3[] meshNormals = _mesh.normals;
             Vector2[] meshUvs = _mesh.uv;
 
+            float time2 = Time.realtimeSinceStartup;
             for (int i = 0; i < meshTriangles.Length; i += 3)
             {
                 //We need the verts in order so that we know which way to wind our new mesh triangles.
@@ -594,10 +595,13 @@ namespace Assets.Scripts
                     _pointsAlongPlane.Add(intersection2);
                 }
             }
+            time2 = Time.realtimeSinceStartup - time2;
+            Debug.Log(time2);
 
             //If the object is solid, join the new points along the plane otherwise do the reverse winding
             if (_isSolid)
             {
+                float time = Time.realtimeSinceStartup;
                 List<List<Vector3>> vericesPlane = new List<List<Vector3>>();
                 List<Vector3> planeVectors1 = new List<Vector3>();
                 List<Vector3> planeVectors2 = new List<Vector3>();
@@ -705,36 +709,16 @@ namespace Assets.Scripts
                         i = 1;
                     }
                 }
-                Debug.Log(vericesPlane.Count);
+                time = Time.realtimeSinceStartup - time;
+                Debug.Log(time);
                 if (vericesPlane.Count == 1)
                 {
                     JoinPointsAlongPlane();
                 }
                 else
                 {
-                    List<Vector3> inOrder1 = new List<Vector3>();
-                    for (int i = 0; i < _pointsAlongPlane.Count - 2; i += 2)
-                    {
-                        if (vericesPlane[0].Contains(_pointsAlongPlane[i]) == true)
-                        {
-                            inOrder1.Add(_pointsAlongPlane[i]);
-                            inOrder1.Add(_pointsAlongPlane[i + 1]);
-                        }
-                    }
-                    
-                    List<Vector3> inOrder2 = new List<Vector3>();
-                    for (int i = 0; i < _pointsAlongPlane.Count - 2; i += 2)
-                    {
-                        if (vericesPlane[1].Contains(_pointsAlongPlane[i]) == true)
-                        {
-                            inOrder2.Add(_pointsAlongPlane[i]);
-                            inOrder2.Add(_pointsAlongPlane[i + 1]);
-                        }
-                    }
-                    
                     for (int i = 0; i < vericesPlane.Count; i++)
                     {
-                        Debug.Log(vericesPlane[i].Count);
                         JoinPointsAlongPlane(vericesPlane[i]);
                     }
                 }
