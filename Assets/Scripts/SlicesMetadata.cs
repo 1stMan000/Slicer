@@ -6,6 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using UnityEngine.UIElements;
+using UnityEngine.Jobs;
+using Unity.Collections;
+using Unity.Burst;
+using Unity.Jobs;
+using Unity.Mathematics;
+
 
 namespace Assets.Scripts
 {
@@ -486,6 +492,19 @@ namespace Assets.Scripts
 
         Dictionary<Vector3[], Vector3[]> trianglesOfPlane = new Dictionary<Vector3[], Vector3[]>();
 
+        struct CalculateVert : IJob
+        {
+            public Plane Plane;
+            public Vector3 vert1multi;
+
+            public NativeArray<bool> vert1SideMulti;
+
+            public void Execute()
+            {
+                vert1SideMulti[0] = Plane.GetSide(vert1multi);
+            }
+        }
+
         /// <summary>
         /// Compute the positive and negative meshes based on the plane and mesh
         /// </summary>
@@ -504,19 +523,60 @@ namespace Assets.Scripts
                 int vert1Index = Array.IndexOf(meshVerts, vert1);
                 Vector2 uv1 = meshUvs[vert1Index];
                 Vector3 normal1 = meshNormals[vert1Index];
-                bool vert1Side = _plane.GetSide(vert1);
+                bool vert1Side = new bool();
 
                 Vector3 vert2 = meshVerts[meshTriangles[i + 1]];
                 int vert2Index = Array.IndexOf(meshVerts, vert2);
                 Vector2 uv2 = meshUvs[vert2Index];
                 Vector3 normal2 = meshNormals[vert2Index];
-                bool vert2Side = _plane.GetSide(vert2);
+                bool vert2Side = new bool();
 
                 Vector3 vert3 = meshVerts[meshTriangles[i + 2]];
-                bool vert3Side = _plane.GetSide(vert3);
                 int vert3Index = Array.IndexOf(meshVerts, vert3);
                 Vector3 normal3 = meshNormals[vert3Index];
                 Vector2 uv3 = meshUvs[vert3Index];
+                bool vert3Side = new bool();
+
+                NativeList<bool> nativeVert1Side = new NativeList<bool>(Allocator.TempJob);
+                nativeVert1Side.Add(vert1Side);
+                CalculateVert calculateVert = new CalculateVert
+                {
+                    Plane = _plane,
+                    vert1multi = vert1,
+                    vert1SideMulti = nativeVert1Side
+                };
+
+                JobHandle job = calculateVert.Schedule();
+
+                NativeList<bool> nativeVert2Side = new NativeList<bool>(Allocator.TempJob);
+                nativeVert2Side.Add(vert2Side);
+                CalculateVert calculateVert2 = new CalculateVert
+                {
+                    Plane = _plane,
+                    vert1multi = vert2,
+                    vert1SideMulti = nativeVert2Side
+                };
+
+                JobHandle job2 = calculateVert2.Schedule();
+
+                NativeList<bool> nativeVert3Side = new NativeList<bool>(Allocator.TempJob);
+                nativeVert3Side.Add(vert3Side);
+                CalculateVert calculateVert3 = new CalculateVert
+                {
+                    Plane = _plane,
+                    vert1multi = vert3,
+                    vert1SideMulti = nativeVert3Side
+                };
+
+                JobHandle job3 = calculateVert3.Schedule();
+
+                job.Complete();
+                job2.Complete();
+                job3.Complete();
+                
+                vert1Side = nativeVert1Side[0];
+                vert2Side = nativeVert2Side[0];
+                vert3Side = nativeVert3Side[0];
 
                 //All verts are on the same side
                 if (vert1Side == vert2Side && vert2Side == vert3Side)
@@ -540,9 +600,42 @@ namespace Assets.Scripts
                     //vert 1 and 2 are on the same side
                     if (vert1Side == vert2Side)
                     {
-                        //Cast a ray from v2 to v3 and from v3 to v1 to get the intersections                       
-                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection1Uv);
-                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, uv3, vert1, uv1, out intersection2Uv);
+                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert2,
+                            uvGetRay = uv2,
+                            vectorGetRay2 = vert3,
+                            uvGetRay2 = uv3,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter1
+                        };
+
+                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
+
+                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert3,
+                            uvGetRay = uv3,
+                            vectorGetRay2 = vert1,
+                            uvGetRay2 = uv1,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter2
+                        };
+
+                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
+
+                        getRayInterJob.Complete();
+                        getRayInterJob2.Complete();
+
+                        intersection1Uv = getRayIntersectionThread.uvOut;
+                        intersection1 = getInter1[0];
+
+                        intersection2Uv = getRayIntersectionThread2.uvOut;
+                        intersection2 = getInter2[0];
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] {intersection1, intersection2});
 
@@ -557,9 +650,42 @@ namespace Assets.Scripts
                     //vert 1 and 3 are on the same side
                     else if (vert1Side == vert3Side)
                     {
-                        //Cast a ray from v1 to v2 and from v2 to v3 to get the intersections                       
-                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
-                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert2, uv2, vert3, uv3, out intersection2Uv);
+                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert1,
+                            uvGetRay = uv1,
+                            vectorGetRay2 = vert2,
+                            uvGetRay2 = uv2,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter1
+                        };
+
+                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
+
+                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert2,
+                            uvGetRay = uv2,
+                            vectorGetRay2 = vert3,
+                            uvGetRay2 = uv3,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter2
+                        };
+
+                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
+
+                        getRayInterJob.Complete();
+                        getRayInterJob2.Complete();
+
+                        intersection1Uv = getRayIntersectionThread.uvOut;
+                        intersection1 = getInter1[0];
+
+                        intersection2Uv = getRayIntersectionThread2.uvOut;
+                        intersection2 = getInter2[0];
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
@@ -575,9 +701,42 @@ namespace Assets.Scripts
                     //Vert1 is alone
                     else
                     {
-                        //Cast a ray from v1 to v2 and from v1 to v3 to get the intersections                       
-                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert2, uv2, out intersection1Uv);
-                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert1, uv1, vert3, uv3, out intersection2Uv);
+                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert1,
+                            uvGetRay = uv1,
+                            vectorGetRay2 = vert2,
+                            uvGetRay2 = uv2,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter1
+                        };
+
+                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
+
+                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
+                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
+                        {
+                            plane1 = _plane,
+                            vectorGetRay = vert1,
+                            uvGetRay = uv1,
+                            vectorGetRay2 = vert3,
+                            uvGetRay2 = uv3,
+                            uvOut = new Vector2(),
+                            returnedVector = getInter2
+                        };
+
+                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
+
+                        getRayInterJob.Complete();
+                        getRayInterJob2.Complete();
+
+                        intersection1Uv = getRayIntersectionThread.uvOut;
+                        intersection1 = getInter1[0];
+
+                        intersection2Uv = getRayIntersectionThread2.uvOut;
+                        intersection2 = getInter2[0];
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
@@ -734,6 +893,45 @@ namespace Assets.Scripts
                 SmoothVertices();
             }
         }
+
+        struct GetRayIntersectionThread : IJob
+        {
+            public Plane plane1;
+            public Vector3 vectorGetRay;
+            public Vector2 uvGetRay;
+            public Vector3 vectorGetRay2;
+            public Vector2 uvGetRay2;
+
+            public Vector2 uvOut;
+
+            public NativeArray<Vector3> returnedVector;
+
+            Vector3 GetRayPlaneIntersectionPointAndUv(Vector3 vertex1, Vector2 vertex1Uv, Vector3 vertex2, Vector2 vertex2Uv, out Vector2 uv)
+            {
+                float distance = GetDistanceRelativeToPlane(vertex1, vertex2, out Vector3 pointOfIntersection);
+                uv = InterpolateUvs(vertex1Uv, vertex2Uv, distance);
+                return pointOfIntersection;
+            }
+
+            private float GetDistanceRelativeToPlane(Vector3 vertex1, Vector3 vertex2, out Vector3 pointOfintersection)
+            {
+                Ray ray = new Ray(vertex1, (vertex2 - vertex1));
+                plane1.Raycast(ray, out float distance);
+                pointOfintersection = ray.GetPoint(distance);
+                return distance;
+            }
+
+            private Vector2 InterpolateUvs(Vector2 uv1, Vector2 uv2, float distance)
+            {
+                Vector2 uv = Vector2.Lerp(uv1, uv2, distance);
+                return uv;
+            }
+
+            public void Execute()
+            {
+                returnedVector[0] = GetRayPlaneIntersectionPointAndUv(vectorGetRay, uvGetRay, vectorGetRay2, uvGetRay2, out uvOut);
+            }
+        };
 
         /// <summary>
         /// Casts a reay from vertex1 to vertex2 and gets the point of intersection with the plan, calculates the new uv as well.
