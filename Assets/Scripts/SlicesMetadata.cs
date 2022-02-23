@@ -32,17 +32,17 @@ namespace Assets.Scripts
     class SlicesMetadata
     {
         private Mesh _positiveSideMesh;
-        private NativeList<Vector3> _positiveSideVertices = new NativeList<Vector3>(Allocator.TempJob);
-        private NativeList<int> _positiveSideTriangles = new NativeList<int>(Allocator.TempJob);
-        private NativeList<Vector2> _positiveSideUvs = new NativeList<Vector2>(Allocator.TempJob);
-        private NativeList<Vector3> _positiveSideNormals = new NativeList<Vector3>(Allocator.TempJob);
+        private NativeList<Vector3> _positiveSideVertices;
+        private NativeList<int> _positiveSideTriangles;
+        private NativeList<Vector2> _positiveSideUvs;
+        private NativeList<Vector3> _positiveSideNormals;
         public NativeList<int> orderOfVertInOriginalMesh = new NativeList<int>(Allocator.TempJob);
 
         private Mesh _negativeSideMesh;
-        private NativeList<Vector3> _negativeSideVertices = new NativeList<Vector3>(Allocator.TempJob);
-        private NativeList<int> _negativeSideTriangles = new NativeList<int>(Allocator.TempJob);
-        private NativeList<Vector2> _negativeSideUvs = new NativeList<Vector2>(Allocator.TempJob);
-        private NativeList<Vector3> _negativeSideNormals = new NativeList<Vector3>(Allocator.TempJob);
+        private NativeList<Vector3> _negativeSideVertices;
+        private NativeList<int> _negativeSideTriangles;
+        private NativeList<Vector2> _negativeSideUvs;
+        private NativeList<Vector3> _negativeSideNormals;
 
         private readonly List<Vector3> _pointsAlongPlane;
         private Plane _plane;
@@ -588,7 +588,7 @@ namespace Assets.Scripts
                 nativeVert3Side.Dispose();
 
                 //All verts are on the same side
-                if (vert1Side == vert2Side && vert2Side == vert3Side)
+                if (true)
                 {
                     //Add the relevant triangle
                     MeshSide side = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
@@ -604,7 +604,7 @@ namespace Assets.Scripts
 
                         _negativeSideVertsForThread = _negativeSideVertices,
                         _negativeSideTrianglesForThread = _negativeSideTriangles,
-                        _negativeSideNormalsForThread = _positiveSideNormals,
+                        _negativeSideNormalsForThread = _negativeSideNormals,
                         _negativeSideUvsForThread = _negativeSideUvs,
 
                         sideTh = side,
@@ -630,8 +630,10 @@ namespace Assets.Scripts
                     orderOfVertInOriginalMesh = AddTriangleNormalsAndUvsThread.orderOfVertInOrignalMeshForThread;
 
                     _positiveSideVertices = AddTriangleNormalsAndUvsThread._positiveSideVertsForThread;
+                    Debug.Log(AddTriangleNormalsAndUvsThread._positiveSideVertsForThread.Length);
                     _positiveSideTriangles = AddTriangleNormalsAndUvsThread._positiveSideTrianglesForThread;
                     _positiveSideNormals = AddTriangleNormalsAndUvsThread._positiveSideNormalsForThread;
+                    Debug.Log(AddTriangleNormalsAndUvsThread._positiveSideNormalsForThread.Length);
                     _positiveSideUvs = AddTriangleNormalsAndUvsThread._positiveSideUvsForThread;
 
                     _negativeSideVertices = AddTriangleNormalsAndUvsThread._negativeSideVertsForThread;
@@ -997,17 +999,13 @@ namespace Assets.Scripts
         {
             public NativeList<int> orderOfVertInOrignalMeshForThread;
 
-            [NativeDisableContainerSafetyRestrictionAttribute]
             public NativeList<Vector3> _positiveSideVertsForThread;
             public NativeList<int> _positiveSideTrianglesForThread;
-            [NativeDisableContainerSafetyRestrictionAttribute]
             public NativeList<Vector3> _positiveSideNormalsForThread;
             public NativeList<Vector2> _positiveSideUvsForThread;
 
-            [NativeDisableContainerSafetyRestrictionAttribute]
             public NativeList<Vector3> _negativeSideVertsForThread;
             public NativeList<int> _negativeSideTrianglesForThread;
-            [NativeDisableContainerSafetyRestrictionAttribute]
             public NativeList<Vector3> _negativeSideNormalsForThread;
             public NativeList<Vector2> _negativeSideUvsForThread;
 
@@ -1145,12 +1143,14 @@ namespace Assets.Scripts
                 {
                     int i = (int)index;
                     vertices.InsertRangeWithBeginEnd(i, i + 1);
+                    Debug.Log(vertex);
                     vertices[i] = vertex;
                     uvs.InsertRangeWithBeginEnd(i, i + 1);
                     uvs[i] = uv;
                     normals.InsertRangeWithBeginEnd(i, i + 1);
+                    Debug.Log(normal);
                     normals[i] = normal;
-                    triangles.InsertRangeWithBeginEnd(i, i = 1);
+                    triangles.InsertRangeWithBeginEnd(i, i + 1);
                     triangles[i] = vertices.IndexOf(vertex);
 
                     if (side == MeshSide.Positive)
