@@ -63,7 +63,7 @@ namespace Assets.Scripts
                 SkinnedMeshRenderer skinnedMesh = objectToCut.GetComponent<SkinnedMeshRenderer>();
                 positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = positiveSideMeshData;
 
-                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.orderOfVertInOriginalMesh.Count, Allocator.Persistent);
+                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.orderOfVertInOriginalMesh.Length, Allocator.Persistent);
 
                 // Get the number of bone weights per vertex
                 var bonesPerVertex = skinnedMesh.sharedMesh.GetBonesPerVertex();
@@ -81,7 +81,7 @@ namespace Assets.Scripts
                 {
                     bool isOnPositive = false;
                     int vertOrderByOringinalMesh = new int();
-                    for (int z = 0; z < slicesMeta.orderOfVertInOriginalMesh.Count; z++)
+                    for (int z = 0; z < slicesMeta.orderOfVertInOriginalMesh.Length; z++)
                     {
                         if (vertIndex == slicesMeta.orderOfVertInOriginalMesh[z])
                         {

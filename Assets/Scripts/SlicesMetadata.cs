@@ -11,6 +11,8 @@ using Unity.Collections;
 using Unity.Burst;
 using Unity.Jobs;
 using Unity.Mathematics;
+using Unity.Collections.LowLevel;
+using Unity.Collections.LowLevel.Unsafe;
 
 
 namespace Assets.Scripts
@@ -30,17 +32,17 @@ namespace Assets.Scripts
     class SlicesMetadata
     {
         private Mesh _positiveSideMesh;
-        private List<Vector3> _positiveSideVertices;
-        private List<int> _positiveSideTriangles;
-        private List<Vector2> _positiveSideUvs;
-        private List<Vector3> _positiveSideNormals;
-        public List<int> orderOfVertInOriginalMesh = new List<int>();
+        private NativeList<Vector3> _positiveSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+        private NativeList<int> _positiveSideTriangles = new NativeList<int>(Allocator.TempJob);
+        private NativeList<Vector2> _positiveSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+        private NativeList<Vector3> _positiveSideNormals = new NativeList<Vector3>(Allocator.TempJob);
+        public NativeList<int> orderOfVertInOriginalMesh = new NativeList<int>(Allocator.TempJob);
 
         private Mesh _negativeSideMesh;
-        private List<Vector3> _negativeSideVertices;
-        private List<int> _negativeSideTriangles;
-        private List<Vector2> _negativeSideUvs;
-        private List<Vector3> _negativeSideNormals;
+        private NativeList<Vector3> _negativeSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+        private NativeList<int> _negativeSideTriangles = new NativeList<int>(Allocator.TempJob);
+        private NativeList<Vector2> _negativeSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+        private NativeList<Vector3> _negativeSideNormals = new NativeList<Vector3>(Allocator.TempJob);
 
         private readonly List<Vector3> _pointsAlongPlane;
         private Plane _plane;
@@ -97,14 +99,14 @@ namespace Assets.Scripts
 
         public SlicesMetadata(Plane plane, GameObject gameObject, Mesh mesh, bool isSolid, bool createReverseTriangleWindings, bool shareVertices, bool smoothVertices)
         {
-            _positiveSideTriangles = new List<int>();
-            _positiveSideVertices = new List<Vector3>();
-            _negativeSideTriangles = new List<int>();
-            _negativeSideVertices = new List<Vector3>();
-            _positiveSideUvs = new List<Vector2>();
-            _negativeSideUvs = new List<Vector2>();
-            _positiveSideNormals = new List<Vector3>();
-            _negativeSideNormals = new List<Vector3>();
+            _positiveSideTriangles = new NativeList<int>(Allocator.TempJob);
+            _positiveSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+            _negativeSideTriangles = new NativeList<int>(Allocator.TempJob);
+            _negativeSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+            _positiveSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+            _negativeSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+            _positiveSideNormals = new NativeList<Vector3>(Allocator.TempJob);
+            _negativeSideNormals = new NativeList<Vector3>(Allocator.TempJob);
             _pointsAlongPlane = new List<Vector3>();
             _plane = plane;
             sliceObject = gameObject;
@@ -120,14 +122,14 @@ namespace Assets.Scripts
 
         public SlicesMetadata(Plane plane, GameObject gameObject, SkinnedMeshRenderer skinnedMeshRenderer, Mesh mesh, bool isSolid, bool createReverseTriangleWindings, bool shareVertices, bool smoothVertices)
         {
-            _positiveSideTriangles = new List<int>();
-            _positiveSideVertices = new List<Vector3>();
-            _negativeSideTriangles = new List<int>();
-            _negativeSideVertices = new List<Vector3>();
-            _positiveSideUvs = new List<Vector2>();
-            _negativeSideUvs = new List<Vector2>();
-            _positiveSideNormals = new List<Vector3>();
-            _negativeSideNormals = new List<Vector3>();
+            _positiveSideTriangles = new NativeList<int>(Allocator.TempJob);
+            _positiveSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+            _negativeSideTriangles = new NativeList<int>(Allocator.TempJob);
+            _negativeSideVertices = new NativeList<Vector3>(Allocator.TempJob);
+            _positiveSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+            _negativeSideUvs = new NativeList<Vector2>(Allocator.TempJob);
+            _positiveSideNormals = new NativeList<Vector3>(Allocator.TempJob);
+            _negativeSideNormals = new NativeList<Vector3>(Allocator.TempJob);
             _pointsAlongPlane = new List<Vector3>();
             _plane = plane;
             sliceObject = gameObject;
@@ -157,14 +159,13 @@ namespace Assets.Scripts
         {
             if (side == MeshSide.Positive)
             {
-                AddTrianglesNormalsAndUvs(ref _positiveSideVertices, ref _positiveSideTriangles, ref _positiveSideNormals, ref _positiveSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
+                AddTrianglesNormalsAndUvs(side, ref _positiveSideVertices, ref _positiveSideTriangles, ref _positiveSideNormals, ref _positiveSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
             }
             else
             {
-                AddTrianglesNormalsAndUvs(ref _negativeSideVertices, ref _negativeSideTriangles, ref _negativeSideNormals, ref _negativeSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
+                AddTrianglesNormalsAndUvs(side, ref _negativeSideVertices, ref _negativeSideTriangles, ref _negativeSideNormals, ref _negativeSideUvs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
             }
         }
-
 
         /// <summary>
         /// Adds the vertices to the mesh sets the triangles in the order that the vertices are provided.
@@ -187,8 +188,7 @@ namespace Assets.Scripts
         /// <param name="shareVertices"></param>
         /// 
 
-        public int count;
-        private void AddTrianglesNormalsAndUvs(ref List<Vector3> vertices, ref List<int> triangles, ref List<Vector3> normals, ref List<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+        private void AddTrianglesNormalsAndUvs(MeshSide side, ref NativeList<Vector3> vertices, ref NativeList<int> triangles, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
         {
             int tri1Index = vertices.IndexOf(vertex1);
 
@@ -215,7 +215,7 @@ namespace Assets.Scripts
                     i = 0;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex1, num1, (Vector3)normal1, uv1, i);
+                AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex1, num1, (Vector3)normal1, uv1, i);
             }
 
             int tri2Index = vertices.IndexOf(vertex2);
@@ -237,7 +237,7 @@ namespace Assets.Scripts
                     i = 1;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex2, num2, (Vector3)normal2, uv2, i);
+                AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex2, num2, (Vector3)normal2, uv2, i);
             }
 
             int tri3Index = vertices.IndexOf(vertex3);
@@ -259,23 +259,28 @@ namespace Assets.Scripts
                     i = 2;
                 }
 
-                AddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex3, num3, (Vector3)normal3, uv3, i);
+                AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex3, num3, (Vector3)normal3, uv3, i);
             }
         }
         
-        private void AddVertNormalUv(ref List<Vector3> vertices, ref List<Vector3> normals, ref List<Vector2> uvs, ref List<int> triangles, Vector3 vertex, int num, Vector3 normal, Vector2 uv, int? index)
+        private void AddVertNormalUv(MeshSide side , ref NativeList<Vector3> vertices, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, ref NativeList<int> triangles, Vector3 vertex, int num, Vector3 normal, Vector2 uv, int? index)
         {
             if (index != null)
             {
                 int i = (int)index;
-                vertices.Insert(i, vertex);
-                uvs.Insert(i, uv);
-                normals.Insert(i, normal);
-                triangles.Insert(i, i);
+                vertices.InsertRangeWithBeginEnd(i, i + 1);
+                vertices[i] = vertex;
+                uvs.InsertRangeWithBeginEnd(i, i + 1);
+                uvs[i] = uv;
+                normals.InsertRangeWithBeginEnd(i, i + 1);
+                normals[i] = normal;
+                triangles.InsertRangeWithBeginEnd(i, i + 1);
+                triangles[i] = vertices.IndexOf(vertex);
 
-                if (vertices == _positiveSideVertices)
+                if (side == MeshSide.Positive)
                 {
-                    orderOfVertInOriginalMesh.Insert(i, num);
+                    orderOfVertInOriginalMesh.InsertRangeWithBeginEnd(i, i + 1);
+                    orderOfVertInOriginalMesh[i] = num;
                 }
             }
             else
@@ -285,16 +290,16 @@ namespace Assets.Scripts
                 uvs.Add(uv);
                 triangles.Add(vertices.IndexOf(vertex));
 
-                if (vertices == _positiveSideVertices)
+                if (side == MeshSide.Positive)
                 {
                     orderOfVertInOriginalMesh.Add(num);
                 }
             }
         }
 
-        private void ShiftTriangleIndeces(ref List<int> triangles)
+        private void ShiftTriangleIndeces(ref NativeList<int> triangles)
         {
-            for (int j = 0; j < triangles.Count; j += 3)
+            for (int j = 0; j < triangles.Length; j += 3)
             {
                 triangles[j] += + 3;
                 triangles[j + 1] += 3;
@@ -308,13 +313,13 @@ namespace Assets.Scripts
         /// </summary>
         private void AddReverseTriangleWinding()
         {
-            int positiveVertsStartIndex = _positiveSideVertices.Count;
+            int positiveVertsStartIndex = _positiveSideVertices.Length;
             //Duplicate the original vertices
             _positiveSideVertices.AddRange(_positiveSideVertices);
             _positiveSideUvs.AddRange(_positiveSideUvs);
             _positiveSideNormals.AddRange(FlipNormals(_positiveSideNormals));
 
-            int numPositiveTriangles = _positiveSideTriangles.Count;
+            int numPositiveTriangles = _positiveSideTriangles.Length;
 
             //Add reverse windings
             for (int i = 0; i < numPositiveTriangles; i += 3)
@@ -324,13 +329,13 @@ namespace Assets.Scripts
                 _positiveSideTriangles.Add(positiveVertsStartIndex + _positiveSideTriangles[i + 1]);
             }
 
-            int negativeVertextStartIndex = _negativeSideVertices.Count;
+            int negativeVertextStartIndex = _negativeSideVertices.Length;
             //Duplicate the original vertices
             _negativeSideVertices.AddRange(_negativeSideVertices);
             _negativeSideUvs.AddRange(_negativeSideUvs);
             _negativeSideNormals.AddRange(FlipNormals(_negativeSideNormals));
 
-            int numNegativeTriangles = _negativeSideTriangles.Count;
+            int numNegativeTriangles = _negativeSideTriangles.Length;
 
             //Add reverse windings
             for (int i = 0; i < numNegativeTriangles; i += 3)
@@ -578,12 +583,61 @@ namespace Assets.Scripts
                 vert2Side = nativeVert2Side[0];
                 vert3Side = nativeVert3Side[0];
 
+                nativeVert1Side.Dispose();
+                nativeVert2Side.Dispose();
+                nativeVert3Side.Dispose();
+
                 //All verts are on the same side
                 if (vert1Side == vert2Side && vert2Side == vert3Side)
                 {
                     //Add the relevant triangle
                     MeshSide side = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
-                    AddTrianglesNormalAndUvs(side, vert1, meshTriangles[i], normal1, uv1, vert2, meshTriangles[i + 1], normal2, uv2, vert3, meshTriangles[i + 2], normal3, uv3, true, false);
+                    
+                    AddTriangleNormalsAndUvsThread AddTriangleNormalsAndUvsThread = new AddTriangleNormalsAndUvsThread()
+                    {
+                        orderOfVertInOrignalMeshForThread = orderOfVertInOriginalMesh,
+
+                        _positiveSideVertsForThread = _positiveSideVertices,
+                        _positiveSideTrianglesForThread = _positiveSideTriangles,
+                        _positiveSideNormalsForThread = _positiveSideNormals,
+                        _positiveSideUvsForThread = _positiveSideUvs,
+
+                        _negativeSideVertsForThread = _negativeSideVertices,
+                        _negativeSideTrianglesForThread = _negativeSideTriangles,
+                        _negativeSideNormalsForThread = _positiveSideNormals,
+                        _negativeSideUvsForThread = _negativeSideUvs,
+
+                        sideTh = side,
+                        vertex1Th = vert1,
+                        num1Th = meshTriangles[i],
+                        normal1Th = normal1,
+                        uv1Th = uv1,
+                        vertex2Th = vert2,
+                        num2Th = meshTriangles[i + 1],
+                        normal2Th = normal2,
+                        uv2Th = uv2,
+                        vertex3Th = vert3,
+                        num3Th = meshTriangles[i + 2],
+                        normal3Th = normal3,
+                        uv3Th = uv3,
+                        shareVerticesTh = true,
+                        addFirsthTh = false
+                    };
+
+                    JobHandle jobHandle = AddTriangleNormalsAndUvsThread.Schedule();
+                    jobHandle.Complete();
+
+                    orderOfVertInOriginalMesh = AddTriangleNormalsAndUvsThread.orderOfVertInOrignalMeshForThread;
+
+                    _positiveSideVertices = AddTriangleNormalsAndUvsThread._positiveSideVertsForThread;
+                    _positiveSideTriangles = AddTriangleNormalsAndUvsThread._positiveSideTrianglesForThread;
+                    _positiveSideNormals = AddTriangleNormalsAndUvsThread._positiveSideNormalsForThread;
+                    _positiveSideUvs = AddTriangleNormalsAndUvsThread._positiveSideUvsForThread;
+
+                    _negativeSideVertices = AddTriangleNormalsAndUvsThread._negativeSideVertsForThread;
+                    _negativeSideTriangles = AddTriangleNormalsAndUvsThread._negativeSideTrianglesForThread;
+                    _negativeSideNormals = AddTriangleNormalsAndUvsThread._negativeSideNormalsForThread;
+                    _negativeSideUvs = AddTriangleNormalsAndUvsThread._negativeSideUvsForThread;
                 }
                 else
                 {
@@ -633,9 +687,11 @@ namespace Assets.Scripts
 
                         intersection1Uv = getRayIntersectionThread.uvOut;
                         intersection1 = getInter1[0];
+                        getInter1.Dispose();
 
                         intersection2Uv = getRayIntersectionThread2.uvOut;
                         intersection2 = getInter2[0];
+                        getInter2.Dispose();
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] {intersection1, intersection2});
 
@@ -683,9 +739,11 @@ namespace Assets.Scripts
 
                         intersection1Uv = getRayIntersectionThread.uvOut;
                         intersection1 = getInter1[0];
+                        getInter1.Dispose();
 
                         intersection2Uv = getRayIntersectionThread2.uvOut;
                         intersection2 = getInter2[0];
+                        getInter2.Dispose();
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
@@ -734,9 +792,11 @@ namespace Assets.Scripts
 
                         intersection1Uv = getRayIntersectionThread.uvOut;
                         intersection1 = getInter1[0];
+                        getInter1.Dispose();
 
                         intersection2Uv = getRayIntersectionThread2.uvOut;
                         intersection2 = getInter2[0];
+                        getInter2.Dispose();
 
                         trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
 
@@ -931,7 +991,188 @@ namespace Assets.Scripts
             {
                 returnedVector[0] = GetRayPlaneIntersectionPointAndUv(vectorGetRay, uvGetRay, vectorGetRay2, uvGetRay2, out uvOut);
             }
-        };
+        }
+
+        struct AddTriangleNormalsAndUvsThread : IJob
+        {
+            public NativeList<int> orderOfVertInOrignalMeshForThread;
+
+            [NativeDisableContainerSafetyRestrictionAttribute]
+            public NativeList<Vector3> _positiveSideVertsForThread;
+            public NativeList<int> _positiveSideTrianglesForThread;
+            [NativeDisableContainerSafetyRestrictionAttribute]
+            public NativeList<Vector3> _positiveSideNormalsForThread;
+            public NativeList<Vector2> _positiveSideUvsForThread;
+
+            [NativeDisableContainerSafetyRestrictionAttribute]
+            public NativeList<Vector3> _negativeSideVertsForThread;
+            public NativeList<int> _negativeSideTrianglesForThread;
+            [NativeDisableContainerSafetyRestrictionAttribute]
+            public NativeList<Vector3> _negativeSideNormalsForThread;
+            public NativeList<Vector2> _negativeSideUvsForThread;
+
+            public MeshSide sideTh;
+            public Vector3 vertex1Th;
+            public int num1Th;
+            public Vector3? normal1Th;
+            public Vector2 uv1Th;
+            public Vector3 vertex2Th;
+            public int num2Th;
+            public Vector3? normal2Th;
+            public Vector2 uv2Th;
+            public Vector3 vertex3Th;
+            public int num3Th;
+            public Vector3? normal3Th;
+            public Vector2 uv3Th;
+            public bool shareVerticesTh;
+            public bool addFirsthTh;
+
+            public void Execute()
+            {
+                AddTrianglesNormalAndUvs(sideTh, vertex1Th, num1Th, normal1Th, uv1Th, vertex2Th, num2Th, normal2Th, uv2Th, vertex3Th, num3Th, normal3Th, uv3Th, shareVerticesTh, addFirsthTh);
+            }
+
+            private void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+            {
+                if (side == MeshSide.Positive)
+                {
+                    AddTrianglesNormalsAndUvs(side, ref _positiveSideVertsForThread, ref _positiveSideTrianglesForThread, ref _positiveSideNormalsForThread, ref _positiveSideUvsForThread, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
+                }
+                else
+                {
+                    AddTrianglesNormalsAndUvs(side, ref _negativeSideVertsForThread, ref _negativeSideTrianglesForThread, ref _negativeSideNormalsForThread, ref _negativeSideUvsForThread, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, shareVertices, addFirst);
+                }
+            }
+
+            private void AddTrianglesNormalsAndUvs(MeshSide side, ref NativeList<Vector3> vertices, ref NativeList<int> triangles, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+            {
+                int tri1Index = vertices.IndexOf(vertex1);
+
+                if (addFirst)
+                {
+                    ShiftTriangleIndeces(ref triangles);
+                }
+
+                //If a the vertex already exists we just add a triangle reference to it, if not add the vert to the list and then add the tri index
+                if (tri1Index > -1 && shareVertices)
+                {
+                    triangles.Add(tri1Index);
+                }
+                else
+                {
+                    if (normal1 == null)
+                    {
+                        normal1 = ComputeNormal(vertex1, vertex2, vertex3);
+                    }
+
+                    int? i = null;
+                    if (addFirst)
+                    {
+                        i = 0;
+                    }
+
+                    AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex1, num1, (Vector3)normal1, uv1, i);
+                }
+
+                int tri2Index = vertices.IndexOf(vertex2);
+
+                if (tri2Index > -1 && shareVertices)
+                {
+                    triangles.Add(tri2Index);
+                }
+                else
+                {
+                    if (normal2 == null)
+                    {
+                        normal2 = ComputeNormal(vertex2, vertex3, vertex1);
+                    }
+
+                    int? i = null;
+                    if (addFirst)
+                    {
+                        i = 1;
+                    }
+
+                    AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex2, num2, (Vector3)normal2, uv2, i);
+                }
+
+                int tri3Index = vertices.IndexOf(vertex3);
+
+                if (tri3Index > -1 && shareVertices)
+                {
+                    triangles.Add(tri3Index);
+                }
+                else
+                {
+                    if (normal3 == null)
+                    {
+                        normal3 = ComputeNormal(vertex3, vertex1, vertex2);
+                    }
+
+                    int? i = null;
+                    if (addFirst)
+                    {
+                        i = 2;
+                    }
+
+                    AddVertNormalUv(side, ref vertices, ref normals, ref uvs, ref triangles, vertex3, num3, (Vector3)normal3, uv3, i);
+                }
+            }
+
+            private void ShiftTriangleIndeces(ref NativeList<int> triangles)
+            {
+                for (int j = 0; j < triangles.Length; j += 3)
+                {
+                    triangles[j] += +3;
+                    triangles[j + 1] += 3;
+                    triangles[j + 2] += 3;
+                }
+            }
+
+            private Vector3 ComputeNormal(Vector3 vertex1, Vector3 vertex2, Vector3 vertex3)
+            {
+                Vector3 side1 = vertex2 - vertex1;
+                Vector3 side2 = vertex3 - vertex1;
+
+                Vector3 normal = Vector3.Cross(side1, side2);
+
+                return normal;
+            }
+
+            private void AddVertNormalUv(MeshSide side, ref NativeList<Vector3> vertices, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, ref NativeList<int> triangles, Vector3 vertex, int num, Vector3 normal, Vector2 uv, int? index)
+            {
+                if (index != null)
+                {
+                    int i = (int)index;
+                    vertices.InsertRangeWithBeginEnd(i, i + 1);
+                    vertices[i] = vertex;
+                    uvs.InsertRangeWithBeginEnd(i, i + 1);
+                    uvs[i] = uv;
+                    normals.InsertRangeWithBeginEnd(i, i + 1);
+                    normals[i] = normal;
+                    triangles.InsertRangeWithBeginEnd(i, i = 1);
+                    triangles[i] = vertices.IndexOf(vertex);
+
+                    if (side == MeshSide.Positive)
+                    {
+                        orderOfVertInOrignalMeshForThread.InsertRangeWithBeginEnd(i, i + 1);
+                        orderOfVertInOrignalMeshForThread[i] = num;
+                    }
+                }
+                else
+                {
+                    vertices.Add(vertex);
+                    normals.Add(normal);
+                    uvs.Add(uv);
+                    triangles.Add(vertices.IndexOf(vertex));
+
+                    if (side == MeshSide.Positive)
+                    {
+                        orderOfVertInOrignalMeshForThread.Add(num);
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Casts a reay from vertex1 to vertex2 and gets the point of intersection with the plan, calculates the new uv as well.
@@ -1001,9 +1242,9 @@ namespace Assets.Scripts
         /// </summary>
         /// <param name="currentNormals"></param>
         /// <returns></returns>
-        private List<Vector3> FlipNormals(List<Vector3> currentNormals)
+        private NativeList<Vector3> FlipNormals(NativeList<Vector3> currentNormals)
         {
-            List<Vector3> flippedNormals = new List<Vector3>();
+            NativeList<Vector3> flippedNormals = new NativeList<Vector3>();
 
             foreach (Vector3 normal in currentNormals)
             {
@@ -1020,14 +1261,14 @@ namespace Assets.Scripts
             DoSmoothing(ref _negativeSideVertices, ref _negativeSideNormals, ref _negativeSideTriangles);
         }
 
-        private void DoSmoothing(ref List<Vector3> vertices, ref List<Vector3> normals, ref List<int> triangles)
+        private void DoSmoothing(ref NativeList<Vector3> vertices, ref NativeList<Vector3> normals, ref NativeList<int> triangles)
         {
-            normals.ForEach(x =>
+            for (int i = 0; i < normals.Length; i++)
             {
-                x = Vector3.zero;
-            });
+                normals[i] = Vector3.zero;
+            }
 
-            for (int i = 0; i < triangles.Count; i += 3)
+            for (int i = 0; i < triangles.Length; i += 3)
             {
                 int vertIndex1 = triangles[i];
                 int vertIndex2 = triangles[i + 1];
@@ -1040,10 +1281,10 @@ namespace Assets.Scripts
                 normals[vertIndex3] += triangleNormal;
             }
 
-            normals.ForEach(x =>
+            for (int i = 0; i < normals.Length; i++)
             {
-                x.Normalize();
-            });
+                normals[i] = normals[i].normalized;
+            }
         }
     }
 }
