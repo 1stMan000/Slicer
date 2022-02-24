@@ -63,7 +63,7 @@ namespace Assets.Scripts
                 SkinnedMeshRenderer skinnedMesh = objectToCut.GetComponent<SkinnedMeshRenderer>();
                 positiveObject.GetComponent<SkinnedMeshRenderer>().sharedMesh = positiveSideMeshData;
 
-                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.orderOfVertInOriginalMesh.Count, Allocator.Persistent);
+                NativeArray<byte> vs = new NativeArray<byte>(slicesMeta.orderOfVertInOriginalMesh.Count, Allocator.TempJob);
 
                 // Get the number of bone weights per vertex
                 var bonesPerVertex = skinnedMesh.sharedMesh.GetBonesPerVertex();
@@ -172,7 +172,7 @@ namespace Assets.Scripts
                     }
                 }
 
-                NativeArray<BoneWeight1> boneWeight1s = new NativeArray<BoneWeight1>(boneWeight1sforNative.Count, Allocator.Persistent);
+                NativeArray<BoneWeight1> boneWeight1s = new NativeArray<BoneWeight1>(boneWeight1sforNative.Count, Allocator.TempJob);
                 for (int count = 0; count < boneWeight1sforNative.Count; count++)
                 {
                     boneWeight1s[count] = boneWeight1sforNative[count];

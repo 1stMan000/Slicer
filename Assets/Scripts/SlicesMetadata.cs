@@ -600,6 +600,7 @@ namespace Assets.Scripts
                     //vert 1 and 2 are on the same side
                     if (vert1Side == vert2Side)
                     {
+                        float time = Time.realtimeSinceStartup;
                         NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
                         GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
                         {
@@ -646,6 +647,9 @@ namespace Assets.Scripts
                         AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
 
                         AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 1], null, uv3, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
+
+                        time = Time.realtimeSinceStartup - time;
+                        Debug.Log(time);
                     }
                     //vert 1 and 3 are on the same side
                     else if (vert1Side == vert3Side)
