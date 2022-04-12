@@ -1,0 +1,180 @@
+Using pre-set license
+Built from '2020.3/staging' branch; Version is '2020.3.33f1 (915a7af8b0d5) revision 9525882'; Using compiler version '192528614'; Build Type 'Release'
+OS: 'Windows 10  (10.0.19044) 64bit Core' Language: 'ko' Physical Memory: 16318 MB
+BatchMode: 1, IsHumanControllingUs: 0, StartBugReporterOnCrash: 0, Is64bit: 1, IsPro: 0
+
+COMMAND LINE ARGUMENTS:
+D:\2020.3.33f1\Editor\Unity.exe
+-adb2
+-batchMode
+-noUpm
+-name
+AssetImportWorker0
+-projectPath
+D:/Slicer2
+-logFile
+Logs/AssetImportWorker0.log
+-srvPort
+62950
+Successfully changed project path to: D:/Slicer2
+D:/Slicer2
+Using Asset Import Pipeline V2.
+Refreshing native plugins compatible for Editor in 46.92 ms, found 2 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 2020.3.33f1 (915a7af8b0d5)
+[Subsystems] Discovering subsystems at path D:/2020.3.33f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path D:/Slicer2/Assets
+GfxDevice: creating device client; threaded=0
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce RTX 2070 (ID=0x1f02)
+    Vendor:   
+    VRAM:     8031 MB
+    Driver:   27.21.14.5671
+Initialize mono
+Mono path[0] = 'D:/2020.3.33f1/Editor/Data/Managed'
+Mono path[1] = 'D:/2020.3.33f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit'
+Mono config path = 'D:/2020.3.33f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56100
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+Register platform support module: D:/2020.3.33f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll
+Registered in 0.000873 seconds.
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 47.53 ms, found 2 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  0.458 seconds
+Domain Reload Profiling:
+	ReloadAssembly (459ms)
+		BeginReloadAssembly (42ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (0ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (1ms)
+		EndReloadAssembly (366ms)
+			LoadAssemblies (41ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (120ms)
+			ReleaseScriptCaches (0ms)
+			RebuildScriptCaches (24ms)
+			SetupLoadedEditorAssemblies (145ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (3ms)
+				SetLoadedEditorAssemblies (0ms)
+				RefreshPlugins (48ms)
+				BeforeProcessingInitializeOnLoad (10ms)
+				ProcessInitializeOnLoadAttributes (62ms)
+				ProcessInitializeOnLoadMethodAttributes (21ms)
+				AfterProcessingInitializeOnLoad (0ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (0ms)
+Platform modules already initialized, skipping
+Registering precompiled user dll's ...
+Registered in 0.003031 seconds.
+Begin MonoManager ReloadAssembly
+Symbol file LoadedFromMemory doesn't match image D:\Slicer2\Library\PackageCache\com.unity.collab-proxy@1.15.15\Lib\Editor\PlasticSCM\unityplastic.dll
+Native extension for WindowsStandalone target not found
+Refreshing native plugins compatible for Editor in 52.39 ms, found 2 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Mono: successfully reloaded assembly
+- Completed reload, in  1.100 seconds
+Domain Reload Profiling:
+	ReloadAssembly (1101ms)
+		BeginReloadAssembly (112ms)
+			ExecutionOrderSort (0ms)
+			DisableScriptedObjects (3ms)
+			BackupInstance (0ms)
+			ReleaseScriptingObjects (0ms)
+			CreateAndSetChildDomain (16ms)
+		EndReloadAssembly (946ms)
+			LoadAssemblies (72ms)
+			RebuildTransferFunctionScriptingTraits (0ms)
+			SetupTypeCache (276ms)
+			ReleaseScriptCaches (0ms)
+			RebuildScriptCaches (44ms)
+			SetupLoadedEditorAssemblies (456ms)
+				LogAssemblyErrors (0ms)
+				InitializePlatformSupportModulesInManaged (3ms)
+				SetLoadedEditorAssemblies (0ms)
+				RefreshPlugins (52ms)
+				BeforeProcessingInitializeOnLoad (70ms)
+				ProcessInitializeOnLoadAttributes (321ms)
+				ProcessInitializeOnLoadMethodAttributes (8ms)
+				AfterProcessingInitializeOnLoad (2ms)
+				EditorAssembliesLoaded (0ms)
+			ExecutionOrderSort2 (0ms)
+			AwakeInstancesAfterBackupRestoration (5ms)
+Platform modules already initialized, skipping
+========================================================================
+Worker process is ready to serve import requests
+Launched and connected shader compiler UnityShaderCompiler.exe after 0.05 seconds
+Refreshing native plugins compatible for Editor in 0.51 ms, found 2 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Unloading 3078 Unused Serialized files (Serialized files now loaded: 0)
+System memory in use before: 140.6 MB.
+System memory in use after: 140.8 MB.
+
+Unloading 25 unused Assets to reduce memory usage. Loaded Objects now: 3507.
+Total: 2.857800 ms (FindLiveObjects: 0.204900 ms CreateObjectMapping: 0.132800 ms MarkObjects: 2.461300 ms  DeleteObjects: 0.058100 ms)
+
+AssetImportParameters requested are different than current active one (requested -> active):
+  custom:framework-win-MediaFoundation: 216162199b28c13a410421893ffa2e32 -> 
+  custom:video-decoder-ogg-theora: a1e56fd34408186e4bbccfd4996cb3dc -> 
+  custom:container-muxer-webm: aa71ff27fc2769a1b78a27578f13a17b -> 
+  custom:container-demuxer-webm: 4f35f7cbe854078d1ac9338744f61a02 -> 
+  custom:container-demuxer-ogg: 62fdf1f143b41e24485cea50d1cbac27 -> 
+  custom:video-encoder-webm-vp8: eb34c28f22e8b96e1ab97ce403110664 -> 
+  custom:video-decoder-webm-vp8: 9c59270c3fd7afecdb556c50c9e8de78 -> 
+  custom:audio-decoder-ogg-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+  custom:audio-encoder-webm-vorbis: bf7c407c2cedff20999df2af8eb42d56 -> 
+========================================================================
+Received Import Request.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '0b5c0ca36329558775b3cc9e88401dd0') in 0.036905 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 83.899836 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: 'ed7897a759176fbb3371dd3685270f27') in 0.006456 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 114.450680 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '7a08a7352a2eeef31c3763446164891d') in 0.001370 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 29.747177 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '8c6c9a14f2a314d7f2113bd693cf296f') in 0.001273 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 986.889041 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '49f8485d5225f5b8fd12a347ee86bb15') in 0.001613 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 567.119143 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: 'c00f98ad5999798c3dc059f9b8fb9593') in 0.001323 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 478.777743 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '45599950a39f99400f20428440067aff') in 0.001425 seconds 
+========================================================================
+Received Import Request.
+  Time since last request: 173.593998 seconds.
+  path: Assets/Scripts/SlicesMetadata.cs
+  artifactKey: Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)
+Start importing Assets/Scripts/SlicesMetadata.cs using Guid(8b02c22d2b6e66e4798c05133b7d4228) Importer(815301076,1909f56bfc062723c751e8b465ee728b)  -> (artifact id: '66f6094e8b42bf7aef0741285fb79a3f') in 0.003295 seconds 
+AssetImportWorkerClient::OnTransportError - code=2 error=End of file
