@@ -508,14 +508,41 @@ namespace Assets.Scripts
         struct CalculateSideJob : IJobParallelFor
         {
             public Plane plane;
+            [NativeDisableParallelForRestriction]
             public NativeArray<int> meshTriangles;
+            [NativeDisableParallelForRestriction]
             public NativeArray<Vector3> meshVerts;
+            [NativeDisableParallelForRestriction]
             public NativeArray<Vector3> meshNormals;
+            [NativeDisableParallelForRestriction]
             public NativeArray<Vector2> meshUVs;
+            public NativeArray<Vector3> trianglesOfPlane;
 
-            void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool shareVertices, bool addFirst)
+            public NativeArray<Vector3> positiveSideVerts;
+            public NativeArray<int> positiveSideTriangles;
+            public NativeArray<Vector3> positiveSideNormals;
+            public NativeArray<Vector2> positiveSideUVs;
+
+            public NativeArray<Vector3> negativeSideVerts;
+            public NativeArray<int> negativeSideTriangles;
+            public NativeArray<Vector3> negativeSideNormals;
+            public NativeArray<Vector2> negativeSideUVs;
+
+            void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
             {
-                
+                if (side == MeshSide.Positive)
+                {
+                    AddTrianglesNormalsAndUvs(ref positiveSideVerts, ref positiveSideTriangles, ref positiveSideNormals, ref positiveSideUVs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, addFirst);
+                }
+                else
+                {
+                    AddTrianglesNormalsAndUvs(ref negativeSideVerts, ref negativeSideTriangles, ref negativeSideNormals, ref negativeSideUVs, vertex1, num1, normal1, uv1, vertex2, num2, normal2, uv2, vertex3, num3, normal3, uv3, addFirst);
+                }
+            }
+
+            void AddTrianglesNormalsAndUvs(ref NativeArray<Vector3> vertices, ref NativeArray<int> triangles, ref NativeArray<Vector3> normals, ref NativeArray<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
+            {
+                Debug.Log(1);
             }
 
             Vector3 GetRayPlaneIntersectionPointAndUv(Vector3 vertex1, Vector2 vertex1Uv, Vector3 vertex2, Vector2 vertex2Uv, out Vector2 uv)
@@ -586,7 +613,7 @@ namespace Assets.Scripts
                 if (vert1Side == vert2Side && vert2Side == vert3Side)
                 {
                     MeshSide side = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
-                    AddTrianglesNormalAndUvs(side, vert1, meshTriangles[i], normal1, uv1, vert2, meshTriangles[i + 1], normal2, uv2, vert3, meshTriangles[i + 2], normal3, uv3, true, false);
+                    AddTrianglesNormalAndUvs(side, vert1, meshTriangles[i], normal1, uv1, vert2, meshTriangles[i + 1], normal2, uv2, vert3, meshTriangles[i + 2], normal3, uv3, false);
                 }
                 else
                 {
@@ -599,18 +626,63 @@ namespace Assets.Scripts
                     MeshSide side1 = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
                     MeshSide side2 = (vert1Side) ? MeshSide.Negative : MeshSide.Positive;
 
-                    Vector2 uvOut;
                     if (vert1Side == vert2Side)
                     {
-                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, normal2, vert3, normal3, out uvOut);
+                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, normal2, vert3, normal3, out intersection1Uv);
+                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert1, normal1, vert3, normal3, out intersection2Uv);
+
+                        trianglesOfPlane[i] = vert1;
+                        trianglesOfPlane[i + 1] = vert2;
+                        trianglesOfPlane[i + 2] = vert3;
+                        trianglesOfPlane[i + 3] = intersection1;
+                        trianglesOfPlane[i + 4] = intersection2;
+
+                        int boneNum = -1;
+                        int boneNum2 = -1;
+
+                        //Add the positive or negative triangles
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, vert2, meshTriangles[i + 1], null, uv2, intersection1, boneNum, null, intersection1Uv, false);
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, false);
+
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 1], null, uv3, intersection2, boneNum2, null, intersection2Uv, false);
                     }
                     else if (vert1Side == vert3Side)
                     {
+                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, normal1, vert2, normal2, out intersection1Uv);
+                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, normal3, vert2, normal2, out intersection2Uv);
 
+                        trianglesOfPlane[i] = vert1;
+                        trianglesOfPlane[i + 1] = vert2;
+                        trianglesOfPlane[i + 2] = vert3;
+                        trianglesOfPlane[i + 3] = intersection1;
+                        trianglesOfPlane[i + 4] = intersection2;
+
+                        int boneNum = -1;
+                        int boneNum2 = -1;
+
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 2], null, uv3, false);
+                        AddTrianglesNormalAndUvs(side1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, vert3, meshTriangles[i + 2], null, uv3, false);
+
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles[i + 2], null, uv2, intersection2, boneNum2, null, intersection2Uv, false);
                     }
                     else
                     {
+                        intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, normal2, vert1, normal1, out intersection1Uv);
+                        intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, normal3, vert1, normal1, out intersection2Uv);
 
+                        trianglesOfPlane[i] = vert1;
+                        trianglesOfPlane[i + 1] = vert2;
+                        trianglesOfPlane[i + 2] = vert3;
+                        trianglesOfPlane[i + 3] = intersection1;
+                        trianglesOfPlane[i + 4] = intersection2;
+
+                        int boneNum = -1;
+                        int boneNum2 = -1;
+
+                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, false);
+
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles[i + 1], null, uv2, vert3, meshTriangles[i + 2], null, uv3, false);
+                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles[i + 2], null, uv3, intersection2, boneNum, null, intersection2Uv, false);
                     }
                 }
             }
@@ -629,220 +701,50 @@ namespace Assets.Scripts
 
             float time2 = Time.realtimeSinceStartup;
             time2 = Time.realtimeSinceStartup - time2;
-            Debug.Log(time2);
 
-            NativeArray<int> meshTrianglesTemp = new NativeArray<int>();
+            NativeArray<int> meshTrianglesTemp = new NativeArray<int>(meshTriangles1.Length, Allocator.TempJob);
             for (int i = 0; i < meshTriangles1.Length; i++)
             {
                 meshTrianglesTemp[i] = meshTriangles1[i];
             }
-
-            NativeArray<Vector3> meshVertsTemp = new NativeArray<Vector3>();
+            
+            NativeArray<Vector3> meshVertsTemp = new NativeArray<Vector3>(meshVerts1.Length, Allocator.TempJob);
             for (int i = 0; i < meshVerts1.Length; i++)
             {
                 meshVertsTemp[i] = meshVerts1[i];
             }
 
-            NativeArray<Vector3> meshNormalsTemp = new NativeArray<Vector3>();
+            NativeArray<Vector3> meshNormalsTemp = new NativeArray<Vector3>(meshNormals1.Length, Allocator.TempJob);
             for (int i = 0; i < meshNormals1.Length; i++)
             {
                 meshNormalsTemp[i] = meshNormals1[i];
             }
 
-            NativeArray<Vector2> meshUvsTemp = new NativeArray<Vector2>();
+            NativeArray<Vector2> meshUvsTemp = new NativeArray<Vector2>(meshUvs1.Length, Allocator.TempJob);
             for (int i = 0; i < meshUvs1.Length; i++)
             {
                 meshUvsTemp[i] = meshUvs1[i];
             }
-
+            
             CalculateSideJob calculateSideJob = new CalculateSideJob()
             {
                 plane = _plane,
                 meshTriangles = meshTrianglesTemp,
                 meshVerts = meshVertsTemp,
                 meshNormals = meshNormalsTemp,
-                meshUVs = meshUvsTemp
+                meshUVs = meshUvsTemp,
+                trianglesOfPlane = new NativeArray<Vector3>(1000, Allocator.TempJob),
+                positiveSideVerts = new NativeArray<Vector3>(10000, Allocator.TempJob),
+                positiveSideTriangles = new NativeArray<int>(10000, Allocator.TempJob),
+                positiveSideNormals = new NativeArray<Vector3>(10000, Allocator.TempJob),
+                positiveSideUVs = new NativeArray<Vector2>(10000, Allocator.TempJob),
+                negativeSideVerts = new NativeArray<Vector3>(10000, Allocator.TempJob),
+                negativeSideTriangles = new NativeArray<int>(10000, Allocator.TempJob),
+                negativeSideNormals = new NativeArray<Vector3>(10000, Allocator.TempJob),
+                negativeSideUVs = new NativeArray<Vector2>(10000, Allocator.TempJob)
             };
 
-            meshTrianglesTemp.Dispose();
-            for (int i = 0; i < meshTriangles1.Length; i += 3)
-            {
-                //All verts are on the same side
-                if (vert1Side == vert2Side && vert2Side == vert3Side)
-                {
-                    //Add the relevant triangle
-                    MeshSide side = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
-                    AddTrianglesNormalAndUvs(side, vert1, meshTriangles1[i], normal1, uv1, vert2, meshTriangles1[i + 1], normal2, uv2, vert3, meshTriangles1[i + 2], normal3, uv3, true, false);
-                }
-                else
-                {
-                    //we need the two points where the plane intersects the triangle.
-                    Vector3 intersection1;
-                    Vector3 intersection2;
-
-                    Vector2 intersection1Uv;
-                    Vector2 intersection2Uv;
-
-                    MeshSide side1 = (vert1Side) ? MeshSide.Positive : MeshSide.Negative;
-                    MeshSide side2 = (vert1Side) ? MeshSide.Negative : MeshSide.Positive;
-
-                    //vert 1 and 2 are on the same side
-                    if (vert1Side == vert2Side)
-                    {
-                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert2,
-                            uvGetRay = uv2,
-                            vectorGetRay2 = vert3,
-                            uvGetRay2 = uv3,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter1
-                        };
-
-                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
-
-                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert3,
-                            uvGetRay = uv3,
-                            vectorGetRay2 = vert1,
-                            uvGetRay2 = uv1,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter2
-                        };
-
-                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
-
-                        getRayInterJob.Complete();
-                        getRayInterJob2.Complete();
-
-                        intersection1Uv = getRayIntersectionThread.uvOut;
-                        intersection1 = getInter1[0];
-
-                        intersection2Uv = getRayIntersectionThread2.uvOut;
-                        intersection2 = getInter2[0];
-
-                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] {intersection1, intersection2});
-
-                        int boneNum = -1;
-                        int boneNum2 = -1;
-                        //Add the positive or negative triangles
-                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles1[i], null, uv1, vert2, meshTriangles1[i + 1], null, uv2, intersection1, boneNum, null, intersection1Uv, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles1[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
-
-                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles1[i + 1], null, uv3, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
-                    }
-                    //vert 1 and 3 are on the same side
-                    else if (vert1Side == vert3Side)
-                    {
-                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert1,
-                            uvGetRay = uv1,
-                            vectorGetRay2 = vert2,
-                            uvGetRay2 = uv2,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter1
-                        };
-
-                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
-
-                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert2,
-                            uvGetRay = uv2,
-                            vectorGetRay2 = vert3,
-                            uvGetRay2 = uv3,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter2
-                        };
-
-                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
-
-                        getRayInterJob.Complete();
-                        getRayInterJob2.Complete();
-
-                        intersection1Uv = getRayIntersectionThread.uvOut;
-                        intersection1 = getInter1[0];
-
-                        intersection2Uv = getRayIntersectionThread2.uvOut;
-                        intersection2 = getInter2[0];
-
-                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
-
-                        int boneNum = -1;
-                        int boneNum2 = -1;
-
-                        //Add the positive triangles
-                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles1[i], null, uv1, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles1[i + 2], null, uv3, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, vert3, meshTriangles1[i + 2], null, uv3, _useSharedVertices, false);
-
-                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles1[i + 2], null, uv2, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
-                    }
-                    //Vert1 is alone
-                    else
-                    {
-                        NativeArray<Vector3> getInter1 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert1,
-                            uvGetRay = uv1,
-                            vectorGetRay2 = vert2,
-                            uvGetRay2 = uv2,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter1
-                        };
-
-                        JobHandle getRayInterJob = getRayIntersectionThread.Schedule();
-
-                        NativeArray<Vector3> getInter2 = new NativeArray<Vector3>(1, Allocator.TempJob);
-                        GetRayIntersectionThread getRayIntersectionThread2 = new GetRayIntersectionThread()
-                        {
-                            plane1 = _plane,
-                            vectorGetRay = vert1,
-                            uvGetRay = uv1,
-                            vectorGetRay2 = vert3,
-                            uvGetRay2 = uv3,
-                            uvOut = new Vector2(),
-                            returnedVector = getInter2
-                        };
-
-                        JobHandle getRayInterJob2 = getRayIntersectionThread2.Schedule();
-
-                        getRayInterJob.Complete();
-                        getRayInterJob2.Complete();
-
-                        intersection1Uv = getRayIntersectionThread.uvOut;
-                        intersection1 = getInter1[0];
-
-                        intersection2Uv = getRayIntersectionThread2.uvOut;
-                        intersection2 = getInter2[0];
-
-                        trianglesOfPlane.Add(new Vector3[] { vert1, vert2, vert3 }, new Vector3[] { intersection1, intersection2 });
-
-                        int boneNum = -1;
-                        int boneNum2 = -1;
-
-                        AddTrianglesNormalAndUvs(side1, vert1, meshTriangles1[i], null, uv1, intersection1, boneNum, null, intersection1Uv, intersection2, boneNum2, null, intersection2Uv, _useSharedVertices, false);
-
-                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert2, meshTriangles1[i + 1], null, uv2, vert3, meshTriangles1[i + 2], null, uv3, _useSharedVertices, false);
-                        AddTrianglesNormalAndUvs(side2, intersection1, boneNum, null, intersection1Uv, vert3, meshTriangles1[i + 2], null, uv3, intersection2, boneNum, null, intersection2Uv, _useSharedVertices, false);
-                    }
-
-                    //Add the newly created points on the plane.
-                    _pointsAlongPlane.Add(intersection1);
-                    _pointsAlongPlane.Add(intersection2);
-                }
-            }
+            JobHandle handle = calculateSideJob.Schedule(400, 1);
 
             //If the object is solid, join the new points along the plane otherwise do the reverse winding
             if (_isSolid)
