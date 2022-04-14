@@ -492,19 +492,7 @@ namespace Assets.Scripts
 
         Dictionary<Vector3[], Vector3[]> trianglesOfPlane = new Dictionary<Vector3[], Vector3[]>();
 
-        struct CalculateVert : IJob
-        {
-            public Plane Plane;
-            public Vector3 vert1multi;
-
-            public NativeArray<bool> vert1SideMulti;
-
-            public void Execute()
-            {
-                vert1SideMulti[0] = Plane.GetSide(vert1multi);
-            }
-        }
-
+        [BurstCompile(CompileSynchronously = true)]
         struct CalculateSideJob : IJobParallelFor
         {
             public Plane plane;
@@ -516,14 +504,17 @@ namespace Assets.Scripts
             public NativeArray<Vector3> meshNormals;
             [NativeDisableParallelForRestriction]
             public NativeArray<Vector2> meshUVs;
+            [NativeDisableParallelForRestriction]
             public NativeArray<Vector3> trianglesOfPlane;
 
             public NativeArray<Vector3> positiveSideVerts;
+            [NativeDisableParallelForRestriction]
             public NativeArray<int> positiveSideTriangles;
             public NativeArray<Vector3> positiveSideNormals;
             public NativeArray<Vector2> positiveSideUVs;
 
             public NativeArray<Vector3> negativeSideVerts;
+            [NativeDisableParallelForRestriction]
             public NativeArray<int> negativeSideTriangles;
             public NativeArray<Vector3> negativeSideNormals;
             public NativeArray<Vector2> negativeSideUVs;
@@ -542,7 +533,28 @@ namespace Assets.Scripts
 
             void AddTrianglesNormalsAndUvs(ref NativeArray<Vector3> vertices, ref NativeArray<int> triangles, ref NativeArray<Vector3> normals, ref NativeArray<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
             {
-                Debug.Log(1);
+                int tri1Index = vertices.IndexOf(vertex1);
+
+                if (addFirst)
+                {
+                    JobShiftTriangleIndeces(ref triangles);
+                }
+                triangles[0] = 1;
+                //If a the vertex already exists we just add a triangle reference to it, if not add the vert to the list and then add the tri index
+                if (tri1Index > -1)
+                {
+                    
+                }
+            }
+
+            void JobShiftTriangleIndeces(ref NativeArray<int> triangles)
+            {
+                for (int j = 0; j < triangles.Length; j += 3)
+                {
+                    triangles[j] += +3;
+                    triangles[j + 1] += 3;
+                    triangles[j + 2] += 3;
+                }
             }
 
             Vector3 GetRayPlaneIntersectionPointAndUv(Vector3 vertex1, Vector2 vertex1Uv, Vector3 vertex2, Vector2 vertex2Uv, out Vector2 uv)
@@ -630,12 +642,12 @@ namespace Assets.Scripts
                     {
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, normal2, vert3, normal3, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert1, normal1, vert3, normal3, out intersection2Uv);
-
-                        trianglesOfPlane[i] = vert1;
-                        trianglesOfPlane[i + 1] = vert2;
-                        trianglesOfPlane[i + 2] = vert3;
-                        trianglesOfPlane[i + 3] = intersection1;
-                        trianglesOfPlane[i + 4] = intersection2;
+                        
+                        trianglesOfPlane[i * 5] = vert1;
+                        trianglesOfPlane[i * 5 + 1] = vert2;
+                        trianglesOfPlane[i * 5 + 2] = vert3;
+                        trianglesOfPlane[i * 5 + 3] = intersection1;
+                        trianglesOfPlane[i * 5 + 4] = intersection2;
 
                         int boneNum = -1;
                         int boneNum2 = -1;
@@ -651,11 +663,11 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert1, normal1, vert2, normal2, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, normal3, vert2, normal2, out intersection2Uv);
 
-                        trianglesOfPlane[i] = vert1;
-                        trianglesOfPlane[i + 1] = vert2;
-                        trianglesOfPlane[i + 2] = vert3;
-                        trianglesOfPlane[i + 3] = intersection1;
-                        trianglesOfPlane[i + 4] = intersection2;
+                        trianglesOfPlane[i * 5] = vert1;
+                        trianglesOfPlane[i * 5 + 1] = vert2;
+                        trianglesOfPlane[i * 5 + 2] = vert3;
+                        trianglesOfPlane[i * 5 + 3] = intersection1;
+                        trianglesOfPlane[i * 5 + 4] = intersection2;
 
                         int boneNum = -1;
                         int boneNum2 = -1;
@@ -670,11 +682,11 @@ namespace Assets.Scripts
                         intersection1 = GetRayPlaneIntersectionPointAndUv(vert2, normal2, vert1, normal1, out intersection1Uv);
                         intersection2 = GetRayPlaneIntersectionPointAndUv(vert3, normal3, vert1, normal1, out intersection2Uv);
 
-                        trianglesOfPlane[i] = vert1;
-                        trianglesOfPlane[i + 1] = vert2;
-                        trianglesOfPlane[i + 2] = vert3;
-                        trianglesOfPlane[i + 3] = intersection1;
-                        trianglesOfPlane[i + 4] = intersection2;
+                        trianglesOfPlane[i * 5] = vert1;
+                        trianglesOfPlane[i * 5 + 1] = vert2;
+                        trianglesOfPlane[i * 5 + 2] = vert3;
+                        trianglesOfPlane[i * 5 + 3] = intersection1;
+                        trianglesOfPlane[i * 5 + 4] = intersection2;
 
                         int boneNum = -1;
                         int boneNum2 = -1;
@@ -733,7 +745,7 @@ namespace Assets.Scripts
                 meshVerts = meshVertsTemp,
                 meshNormals = meshNormalsTemp,
                 meshUVs = meshUvsTemp,
-                trianglesOfPlane = new NativeArray<Vector3>(1000, Allocator.TempJob),
+                trianglesOfPlane = new NativeArray<Vector3>(100000, Allocator.TempJob),
                 positiveSideVerts = new NativeArray<Vector3>(10000, Allocator.TempJob),
                 positiveSideTriangles = new NativeArray<int>(10000, Allocator.TempJob),
                 positiveSideNormals = new NativeArray<Vector3>(10000, Allocator.TempJob),
@@ -744,8 +756,8 @@ namespace Assets.Scripts
                 negativeSideUVs = new NativeArray<Vector2>(10000, Allocator.TempJob)
             };
 
-            JobHandle handle = calculateSideJob.Schedule(400, 1);
-
+            JobHandle handle = calculateSideJob.Schedule(meshTriangles1.Length/3, 1);
+            
             //If the object is solid, join the new points along the plane otherwise do the reverse winding
             if (_isSolid)
             {
