@@ -497,26 +497,22 @@ namespace Assets.Scripts
         {
             public Plane plane;
             public NativeArray<int> meshTriangles;
-            [NativeDisableParallelForRestriction]
             public NativeArray<Vector3> meshVerts;
-            [NativeDisableParallelForRestriction]
             public NativeArray<Vector3> meshNormals;
-            [NativeDisableParallelForRestriction]
             public NativeArray<Vector2> meshUVs;
-            [NativeDisableParallelForRestriction]
             public NativeList<Vector3> trianglesOfPlane;
 
-            public NativeArray<Vector3> positiveSideVerts;
-            [NativeDisableParallelForRestriction]
-            public NativeArray<int> positiveSideTriangles;
-            public NativeArray<Vector3> positiveSideNormals;
-            public NativeArray<Vector2> positiveSideUVs;
+            public NativeList<Vector3> positiveSideVerts;
+            public NativeList<int> positiveSideTriangles;
+            public NativeList<Vector3> positiveSideNormals;
+            public NativeList<Vector2> positiveSideUVs;
 
-            public NativeArray<Vector3> negativeSideVerts;
-            [NativeDisableParallelForRestriction]
-            public NativeArray<int> negativeSideTriangles;
-            public NativeArray<Vector3> negativeSideNormals;
-            public NativeArray<Vector2> negativeSideUVs;
+            public NativeList<Vector3> negativeSideVerts;
+            public NativeList<int> negativeSideTriangles;
+            public NativeList<Vector3> negativeSideNormals;
+            public NativeList<Vector2> negativeSideUVs;
+
+            public NativeList<int> orderOfVertInOrigin;
 
             void AddTrianglesNormalAndUvs(MeshSide side, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
             {
@@ -530,7 +526,7 @@ namespace Assets.Scripts
                 }
             }
 
-            void AddTrianglesNormalsAndUvs(ref NativeArray<Vector3> vertices, ref NativeArray<int> triangles, ref NativeArray<Vector3> normals, ref NativeArray<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
+            void AddTrianglesNormalsAndUvs(ref NativeList<Vector3> vertices, ref NativeList<int> triangles, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, Vector3 vertex1, int num1, Vector3? normal1, Vector2 uv1, Vector3 vertex2, int num2, Vector3? normal2, Vector2 uv2, Vector3 vertex3, int num3, Vector3? normal3, Vector2 uv3, bool addFirst)
             {
                 int tri1Index = vertices.IndexOf(vertex1);
 
@@ -542,17 +538,93 @@ namespace Assets.Scripts
                 //If a the vertex already exists we just add a triangle reference to it, if not add the vert to the list and then add the tri index
                 if (tri1Index > -1)
                 {
-                    
+                    triangles.Add(tri1Index);
+                }
+                else
+                {
+                    if (normal1 == null)
+                    {
+                        normal1 = JobComputeNormal(vertex1, vertex2, vertex3);
+                    }
+
+                    int? i = null;
+                    if (addFirst)
+                    {
+                        i = 0;
+                    }
+
+                    JobAddVertNormalUv(ref vertices, ref normals, ref uvs, ref triangles, vertex1, num1, (Vector3)normal1, uv1, i);
                 }
             }
 
-            void JobShiftTriangleIndeces(ref NativeArray<int> triangles)
+            void JobShiftTriangleIndeces(ref NativeList<int> triangles)
             {
                 for (int j = 0; j < triangles.Length; j += 3)
                 {
                     triangles[j] += +3;
                     triangles[j + 1] += 3;
                     triangles[j + 2] += 3;
+                }
+            }
+
+            Vector3 JobComputeNormal(Vector3 vertex1, Vector3 vertex2, Vector3 vertex3)
+            {
+                Vector3 side1 = vertex2 - vertex1;
+                Vector3 side2 = vertex3 - vertex1;
+
+                Vector3 normal = Vector3.Cross(side1, side2);
+
+                return normal;
+            }
+
+            void JobAddVertNormalUv(ref NativeList<Vector3> vertices, ref NativeList<Vector3> normals, ref NativeList<Vector2> uvs, ref NativeList<int> triangles, Vector3 vertex, int num, Vector3 normal, Vector2 uv, int? index)
+            {
+                if (index != null)
+                {
+                    int i = (int)index;
+                    vertices.InsertRangeWithBeginEnd(i, i + 1);
+                    vertices[i] = vertex;
+                    normals.InsertRangeWithBeginEnd(i, i + 1);
+                    normals[i] = normal;
+                    triangles.InsertRangeWithBeginEnd(i, i + 1);
+                    triangles[i] = i;
+
+                    bool notPos = false;
+                    for (int j = 0; j < positiveSideVerts.Length; j++)
+                    {
+                        if (positiveSideVerts[j] != vertices[j])
+                        {
+                            notPos = true;
+                            break;
+                        }
+                    }
+
+                    if (!notPos)
+                    {
+                        orderOfVertInOrigin.Add(num);
+                    }
+                }
+                else
+                {
+                    vertices.Add(vertex);
+                    normals.Add(normal);
+                    uvs.Add(uv);
+                    triangles.Add(vertices.IndexOf(vertex));
+
+                    bool notPos = false;
+                    for (int j = 0; j < positiveSideVerts.Length; j++)
+                    {
+                        if (positiveSideVerts[j] != vertices[j])
+                        {
+                            notPos = true;
+                            break;
+                        }
+                    }
+
+                    if (!notPos)
+                    {
+                        orderOfVertInOrigin.Add(num);
+                    }
                 }
             }
 
@@ -748,14 +820,15 @@ namespace Assets.Scripts
                 meshNormals = meshNormalsTemp,
                 meshUVs = meshUvsTemp,
                 trianglesOfPlane = new NativeList<Vector3>(Allocator.TempJob),
-                positiveSideVerts = new NativeArray<Vector3>(10000, Allocator.TempJob),
-                positiveSideTriangles = new NativeArray<int>(10000, Allocator.TempJob),
-                positiveSideNormals = new NativeArray<Vector3>(10000, Allocator.TempJob),
-                positiveSideUVs = new NativeArray<Vector2>(10000, Allocator.TempJob),
-                negativeSideVerts = new NativeArray<Vector3>(10000, Allocator.TempJob),
-                negativeSideTriangles = new NativeArray<int>(10000, Allocator.TempJob),
-                negativeSideNormals = new NativeArray<Vector3>(10000, Allocator.TempJob),
-                negativeSideUVs = new NativeArray<Vector2>(10000, Allocator.TempJob)
+                positiveSideVerts = new NativeList<Vector3>(Allocator.TempJob),
+                positiveSideTriangles = new NativeList<int>(Allocator.TempJob),
+                positiveSideNormals = new NativeList<Vector3>(Allocator.TempJob),
+                positiveSideUVs = new NativeList<Vector2>(Allocator.TempJob),
+                negativeSideVerts = new NativeList<Vector3>(Allocator.TempJob),
+                negativeSideTriangles = new NativeList<int>(Allocator.TempJob),
+                negativeSideNormals = new NativeList<Vector3>(Allocator.TempJob),
+                negativeSideUVs = new NativeList<Vector2>(Allocator.TempJob),
+                orderOfVertInOrigin = new NativeList<int>(Allocator.TempJob)
             };
 
             JobHandle handle = calculateSideJob.Schedule();
